@@ -1,0 +1,575 @@
+{
+ "pytest_exit_code": 0,
+ "counts": {
+  "passed": 57,
+  "incomplete": 7
+ },
+ "tests": [
+  {
+   "test": "tests.test_fixture_independence::test_reference_generators_do_not_import_engine",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_fixture_independence::test_spec_reader_is_independent_of_radar_libraries",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_fixture_independence::test_make_fixtures_uses_only_independent_math",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_engine_raw_samples_match_fixture[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_engine_full_volume_raw_equals_spec_reader[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_engine_geometry_metadata_equals_spec_reader[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_dbz_conversion_matches_fixture[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_independent_decoders_agree_over_full_volume[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t2_t3_engine_vs_mpmath_reference[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t3_cross_section_heights_match_reference[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t3_pyart_same_formula[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t3_wradlib_is_a_different_model_and_matches_its_own_formula[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t4_pyart_spherical_horizontal_difference_within_apriori_bound[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t4_geodesic_round_trip_self_consistency[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t5_heights_ordered_by_elevation_at_equal_slant_range[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t5_sweep_time_spread_is_preserved[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t6_echo_tops_match_independent_reference[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t6_threshold_is_integer_exact[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t7_class_counts_match_spec_reader[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t7_only_measured_have_dbz_and_no_unscanned_rows[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t8_no_interpolation_or_resampling[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t10_timestamps_and_metadata_preserved[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t10_fixture_integrity[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t12_geoid_sign_and_plausibility[KTLX_20130520_195111]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_engine_raw_samples_match_fixture[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_engine_full_volume_raw_equals_spec_reader[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_engine_geometry_metadata_equals_spec_reader[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_dbz_conversion_matches_fixture[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t01_decoding::test_independent_decoders_agree_over_full_volume[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t2_t3_engine_vs_mpmath_reference[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t3_cross_section_heights_match_reference[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t3_pyart_same_formula[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t3_wradlib_is_a_different_model_and_matches_its_own_formula[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t4_pyart_spherical_horizontal_difference_within_apriori_bound[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_t4_geodesic_round_trip_self_consistency[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t5_heights_ordered_by_elevation_at_equal_slant_range[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t5_sweep_time_spread_is_preserved[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t6_echo_tops_match_independent_reference[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t6_threshold_is_integer_exact[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t7_class_counts_match_spec_reader[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t7_only_measured_have_dbz_and_no_unscanned_rows[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t8_no_interpolation_or_resampling[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t10_timestamps_and_metadata_preserved[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t10_fixture_integrity[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t12_geoid_sign_and_plausibility[KDIX_20140430_120023]",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_synthetic_vertical_beam_exact",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_synthetic_zero_range_exact",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_synthetic_horizontal_beam_series",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_synthetic_due_north_east_placement",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_prop_height_monotonic_in_range_nonneg_elevation",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_prop_height_monotonic_in_elevation",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_prop_arc_not_longer_than_slant_range_and_height_nonneg",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t02_t04_geometry::test_prop_geodesic_distance_equals_model_arc",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t6_prop_dbz_domain_and_threshold_equivalence",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t7_prop_class_partition_exhaustive_exclusive",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t9_reproducible_exports",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_t11_manifest_and_samples_schema",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_incomplete_validation_item[T12 independent geoid reference (GeographicLib GeoidEval / NGS benchmark) not obtained]",
+   "status": "incomplete",
+   "detail": "INCOMPLETE: T12 independent geoid reference (GeographicLib GeoidEval / NGS benchmark) not obtained"
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_incomplete_validation_item[R3 NOAA Weather and Climate Toolkit reference products not generated]",
+   "status": "incomplete",
+   "detail": "INCOMPLETE: R3 NOAA Weather and Climate Toolkit reference products not generated"
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_incomplete_validation_item[R7 echo-top / composite comparison against MRMS or GridRad not performed]",
+   "status": "incomplete",
+   "detail": "INCOMPLETE: R7 echo-top / composite comparison against MRMS or GridRad not performed"
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_incomplete_validation_item[R5 refractivity ray-trace sensitivity bound not computed]",
+   "status": "incomplete",
+   "detail": "INCOMPLETE: R5 refractivity ray-trace sensitivity bound not computed"
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_incomplete_validation_item[Doviak & Zrnic Eq. 2.28 not checked against the book itself (only Py-ART / wradlib documentation)]",
+   "status": "incomplete",
+   "detail": "INCOMPLETE: Doviak & Zrnic Eq. 2.28 not checked against the book itself (only Py-ART / wradlib documentation)"
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_incomplete_validation_item[NCEI vs Unidata-bucket byte-identity of source files not checked]",
+   "status": "incomplete",
+   "detail": "INCOMPLETE: NCEI vs Unidata-bucket byte-identity of source files not checked"
+  },
+  {
+   "test": "tests.test_t05_t12_data_semantics::test_incomplete_validation_item[what6]",
+   "status": "incomplete",
+   "detail": "INCOMPLETE: antenna height = site height + tower height confirmed only by Py-ART and xradar conventions, not an ICD statement"
+  }
+ ],
+ "metrics": [
+  {
+   "test": "T1",
+   "case": "KTLX_20130520_195111",
+   "quantity": "raw_N / scale / offset mismatches vs fixture",
+   "value": 0,
+   "unit": "gates",
+   "tolerance": 0,
+   "tolerance_key": "raw_N_mismatch_count",
+   "tolerance_basis": "Integers; any difference is a decoding error.",
+   "note": "232 fixture gates"
+  },
+  {
+   "test": "T1",
+   "case": "KTLX_20130520_195111",
+   "quantity": "full-volume REF raw_N mismatches engine vs spec reader",
+   "value": 0,
+   "unit": "gates",
+   "tolerance": 0,
+   "tolerance_key": "raw_N_mismatch_count",
+   "tolerance_basis": "Integers; any difference is a decoding error.",
+   "note": "9480960 gates compared"
+  },
+  {
+   "test": "T1",
+   "case": "KTLX_20130520_195111",
+   "quantity": "azimuth/elevation max abs diff engine vs spec reader",
+   "value": 0.0,
+   "unit": "deg",
+   "tolerance": 0.0,
+   "tolerance_key": "angle_vs_file",
+   "tolerance_basis": "Real*4 values widened to float64 exactly; compared for equality.",
+   "note": ""
+  },
+  {
+   "test": "T1",
+   "case": "KTLX_20130520_195111",
+   "quantity": "max |dBZ engine - fixture|",
+   "value": 0.0,
+   "unit": "dB",
+   "tolerance": 1e-09,
+   "tolerance_key": "dbz_from_N",
+   "tolerance_basis": "float64 evaluation of (N-66)/2; exactly representable, so any larger difference is a bug.",
+   "note": ""
+  },
+  {
+   "test": "T3",
+   "case": "KTLX_20130520_195111",
+   "quantity": "max |height_msl engine - mpmath|",
+   "value": 7.275957614183426e-12,
+   "unit": "m",
+   "tolerance": 1e-06,
+   "tolerance_key": "beam_height_same_model",
+   "tolerance_basis": "float64 evaluation of the identical closed form vs 40-digit mpmath reference (cancellation-free form used in engine).",
+   "note": "232 gates, slant range 2125-459875 m"
+  },
+  {
+   "test": "T2",
+   "case": "KTLX_20130520_195111",
+   "quantity": "max |ground arc engine - mpmath|",
+   "value": 1.1641532182693481e-10,
+   "unit": "m",
+   "tolerance": 1e-06,
+   "tolerance_key": "ground_arc_same_model",
+   "tolerance_basis": "same as beam_height_same_model.",
+   "note": ""
+  },
+  {
+   "test": "T2",
+   "case": "KTLX_20130520_195111",
+   "quantity": "max horizontal distance engine(PROJ) vs reference(GeographicLib)",
+   "value": 2.1200962347271735e-09,
+   "unit": "m",
+   "tolerance": 0.01,
+   "tolerance_key": "horizontal_position_same_ellipsoid",
+   "tolerance_basis": "Both PROJ and GeographicLib implement Karney's geodesic algorithm to nanometre-level accuracy; 1 cm is a loose bound that still catches unit, sign and azimuth-convention bugs.",
+   "note": ""
+  },
+  {
+   "test": "T3",
+   "case": "KTLX_20130520_195111",
+   "quantity": "cross-section max |height engine - reference|",
+   "value": 1.0913936421275139e-11,
+   "unit": "m",
+   "tolerance": 1e-06,
+   "tolerance_key": "beam_height_same_model",
+   "tolerance_basis": "float64 evaluation of the identical closed form vs 40-digit mpmath reference (cancellation-free form used in engine).",
+   "note": "34752 gates"
+  },
+  {
+   "test": "T2",
+   "case": "KTLX_20130520_195111",
+   "quantity": "cross-section max |ground arc engine - reference|",
+   "value": 1.1641532182693481e-10,
+   "unit": "m",
+   "tolerance": 1e-06,
+   "tolerance_key": "ground_arc_same_model",
+   "tolerance_basis": "same as beam_height_same_model.",
+   "note": ""
+  },
+  {
+   "test": "T3",
+   "case": "KTLX_20130520_195111",
+   "quantity": "max |height engine - Py-ART antenna_to_cartesian|",
+   "value": 1.229636836796999e-09,
+   "unit": "m",
+   "tolerance": 1e-06,
+   "tolerance_key": "cross_library_height_same_parameters",
+   "tolerance_basis": "Py-ART / wradlib evaluate the same formula with the same R; only float rounding should differ. A larger value is reported as a finding, not tuned away.",
+   "note": ""
+  },
+  {
+   "test": "T3",
+   "case": "KTLX_20130520_195111",
+   "quantity": "max |ground arc engine - Py-ART|",
+   "value": 1.1641532182693481e-10,
+   "unit": "m",
+   "tolerance": 1e-06,
+   "tolerance_key": "cross_library_height_same_parameters",
+   "tolerance_basis": "Py-ART / wradlib evaluate the same formula with the same R; only float rounding should differ. A larger value is reported as a finding, not tuned away.",
+   "note": ""
+  },
+  {
+   "test": "T3",
+   "case": "KTLX_20130520_195111",
+   "quantity": "wradlib vs mpmath evaluation of wradlib formula",
+   "value": 1.7059846868505701e-09,
+   "unit": "m",
+   "tolerance": 1e-06,
+   "tolerance_key": "wradlib_vs_own_formula_evaluation",
+   "tolerance_basis": "wradlib vs 40-digit mpmath evaluation of wradlib's own documented formula; float64 rounding only.",
+   "note": ""
+  },
+  {
+   "test": "T3",
+   "case": "KTLX_20130520_195111",
+   "quantity": "max |height wradlib - engine| (model difference, report only)",
+   "value": 0.5667465857040952,
+   "unit": "m",
+   "tolerance": 1.0,
+   "tolerance_key": "wradlib_height_model_difference_bound",
+   "tolerance_basis": "Derived analytically from wradlib's source formula h = sqrt(r^2+(R+a)^2+2r(R+a)sin(t)) - R, which places the antenna at radius R+a (site altitude a inside the sphere) whereas the Doviak form used by Py-ART and this engine adds a afterwards. The difference is of order a*r^2/(2R^2) ~ 0.1-0.2 m for a<=400 m, r<=460 km; 1 m is a safe analytic upper bound. Reported as a data-processing difference, not an engine error.",
+   "note": "classification: data-processing difference (antenna altitude placement in the sphere)"
+  },
+  {
+   "test": "T4",
+   "case": "KTLX_20130520_195111",
+   "quantity": "max horizontal |engine - Py-ART spherical aeqd| / ground arc",
+   "value": 0.002479076878290435,
+   "unit": "fraction of ground arc",
+   "tolerance": 0.004,
+   "tolerance_key": "pyart_spherical_horizontal_relative_bound",
+   "tolerance_basis": "Py-ART places gates with a spherical azimuthal-equidistant inverse (R=6370997 m); this engine uses the WGS84 ellipsoidal geodesic. The expected fractional distance discrepancy is bounded by roughly the WGS84 flattening f=1/298.257 (0.34%), so 0.4% is an a-priori upper bound. Reported as a data-processing difference (SCIENTIFIC_LIMITATIONS L10).",
+   "note": "max 1039 m absolute (at 459 km ground arc); classification: data-processing difference (spherical vs WGS84 ellipsoidal placement, L10)"
+  },
+  {
+   "test": "T4",
+   "case": "KTLX_20130520_195111",
+   "quantity": "round-trip azimuth max error",
+   "value": 3.484501576167531e-11,
+   "unit": "deg",
+   "tolerance": null,
+   "tolerance_key": null,
+   "tolerance_basis": null,
+   "note": ""
+  },
+  {
+   "test": "T4",
+   "case": "KTLX_20130520_195111",
+   "quantity": "round-trip distance max error",
+   "value": 2.270098775625229e-09,
+   "unit": "m",
+   "tolerance": 0.01,
+   "tolerance_key": "horizontal_position_same_ellipsoid",
+   "tolerance_basis": "Both PROJ and GeographicLib implement Karney's geodesic algorithm to nanometre-level accuracy; 1 cm is a loose bound that still catches unit, sign and azimuth-convention bugs.",
+   "note": ""
+  },
+  {
+   "test": "T5",
+   "case": "KTLX_20130520_195111",
+   "quantity": "gates where a higher-elevation beam is not higher",
+   "value": 0,
+   "unit": "gates",
+   "tolerance": null,
+   "tolerance_key": null,
+   "tolerance_basis": null,
+   "note": "20912 gate pairs; geometric consistency only (no assumption about reflectivity continuity)"
+  },
+  {
+   "test": "T5",
+   "case": "KTLX_20130520_195111",
+   "quantity": "volume time spread (first to last radial)",
+   "value": 248.703,
+   "unit": "s",
+   "tolerance": null,
+   "tolerance_key": null,
+   "tolerance_basis": null,
+   "note": "sweeps are not simultaneous; 17 sweeps"
+  }
+ ],
+ "mutation": [
+  {
+   "mutation": "effective-radius factor changed",
+   "file": "engine/geometry.py",
+   "result": "KILLED"
+  },
+  {
+   "mutation": "antenna altitude dropped",
+   "file": "engine/geometry.py",
+   "result": "KILLED"
+  },
+  {
+   "mutation": "azimuth offset 0.01 deg",
+   "file": "engine/geometry.py",
+   "result": "KILLED"
+  },
+  {
+   "mutation": "elevation left in degrees",
+   "file": "engine/geometry.py",
+   "result": "KILLED"
+  },
+  {
+   "mutation": "dBZ offset sign flipped",
+   "file": "engine/samples.py",
+   "result": "KILLED"
+  },
+  {
+   "mutation": "range-folded code wrong",
+   "file": "engine/samples.py",
+   "result": "KILLED"
+  },
+  {
+   "mutation": "tower height dropped",
+   "file": "engine/decode.py",
+   "result": "KILLED"
+  },
+  {
+   "mutation": "gate range shifted by half a gate",
+   "file": "engine/samples.py",
+   "result": "KILLED"
+  }
+ ],
+ "datasets": {
+  "KTLX_20130520_195111": "d41dcfa4c7db1b72bd5c0399df7931afca6cfe4b5ee1633f79956da974f2dd19",
+  "KDIX_20140430_120023": "f384c447d06bb96b8fda9d37df3da8f520a7dbdf472bd45472e6ecdc0f108f77"
+ }
+}

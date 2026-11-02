@@ -1,6 +1,6 @@
 # SCIENTIFIC_LIMITATIONS.md (permanent; update with every phase)
 
-Last updated: 2026-11-02 (Phase 1). Status key: **OPEN** = unresolved; **KNOWN** = inherent in the data or model, only documentable; **MITIGATED** = handled in design, to be verified.
+Last updated: 2026-11-02 (Phases 1-4). Status key: **OPEN** = unresolved; **KNOWN** = inherent in the data or model, only documentable; **MITIGATED** = handled in design, to be verified.
 
 | ID | Limitation | Status | Treatment |
 |---|---|---|---|
@@ -13,13 +13,20 @@ Last updated: 2026-11-02 (Phase 1). Status key: **OPEN** = unresolved; **KNOWN**
 | L7 | MSL vs ellipsoid: the ICD gives site height above MSL, but the geoid model is not identified in the sections read. Cesium needs ellipsoid heights. Geoid undulation in CONUS is tens of metres. | OPEN | Both heights stored. Geoid model and version recorded. Test T12. |
 | L8 | Horizontal datum of the radar position (WGS84 vs NAD83) is unstated in the sections read. Difference is about a metre in CONUS, small against 250 m gates. | OPEN | Treated as WGS84. Recorded as an assumption. |
 | L9 | Terrain-relative (AGL) altitude needs a DEM with its own datum and error. | OPEN | AGL is a derived, DEM-attributed quantity only, off by default. |
-| L10 | The sphere-based propagation model (effective radius) versus the WGS84 ellipsoid causes a small horizontal and vertical placement difference. | OPEN | Quantify analytically and numerically in Phase 4. Report, don't hide. |
+| L10 | Horizontal placement: the 4/3 model gives an arc length on an effective sphere, which this engine then lays off as a WGS84 geodesic distance. Py-ART instead uses a spherical azimuthal-equidistant inverse (R=6370997 m). Measured on both cases: the two methods differ by up to 0.25% of ground arc, i.e. 1.04 km (KTLX) and 1.10 km (KDIX) at 440-459 km. Neither is a measurement of where the beam is; the true uncertainty is at least this large at long range. | KNOWN, quantified | Engine choice documented. Difference reported in every validation report (T4). Not validated against any independent truth. |
 | L11 | Interpolation or smoothing between gates creates values that were not measured. Averaging in dBZ rather than linear Z is wrong in principle. Iso-surfaces imply boundaries that do not exist. | MITIGATED | Off by default. Separate artifact with `INTERPOLATED` class, domain/method recorded, and a persistent UI label. |
 | L12 | Dual-polarization data quality (attenuation, calibration, non-meteorological echoes such as birds and insects) is not assessed. Only reflectivity is in scope. | KNOWN | No QC beyond the source's own flags. |
 | L13 | Doviak & Zrnić Eq. 2.28 has been verified only through secondary sources (Py-ART, wradlib docs), not the book. | OPEN | See VALIDATION_PLAN §8 item 2. |
 | L14 | Beamwidth values (0.88° to 0.96°) come from non-authoritative search summaries. | OPEN | Confirm in NEXRAD Technical Information. |
-| L15 | Py-ART's reader interpolates mixed-resolution rays by default (`linear_interp=True`). This would create non-measured values. | MITIGATED | Disable; verify that the output equals decoder B. |
+| L15 | Py-ART's high-level reader (`read_nexrad_archive`) masks N=0 and N=1 together, fills absent gates with 1 (indistinguishable from range-folded), and may interpolate mixed-resolution rays. | MITIGATED | Engine uses `NEXRADLevel2File.radial_records` directly, keeping raw N per recorded gate. Verified gate-for-gate equal to an independent from-spec reader on both cases (T1, 15.6 M gates). |
 | L16 | Third-party reference tools (WCT, GridRad, MRMS) use their own gridding and Earth models, so disagreement is not automatically an error in either. | KNOWN | Classified in §6 of the validation plan. |
-| L17 | Real-data validation currently has no cases. No fixtures exist yet. | OPEN | Phase 2. |
+| L17 | Validation rests on two volumes (KTLX 2013-05-20 19:51:11 UTC, KDIX 2014-04-30 12:00:23 UTC), both from the Unidata mirror of the archive, KTLX is VCP 12 (17 elevation numbers, dual-pol), KDIX is VCP 21 (11 elevation numbers); both contain 0.5 deg and 1.0 deg azimuth-resolution radials; REF scale 2/offset 66 only. Newer VCPs, super-resolution variants, other scale/offset values, Message Type 1 files, and LDM-bzip2 container files are untested by real data. | OPEN | More cases needed before broader claims. |
+| L18 | Reference-tool trap: xradar `DBZH` encodes N=0 and N=1 as -33.0 and -32.5 dBZ (not NaN): 7.76 M + 31.8 k gates in KTLX, 3.89 M + 212 k in KDIX. Using it naively shows below-threshold/range-folded gates as real (very low) reflectivity. | KNOWN | Cross-check compares only N>=2 gates; engine keeps N=0/1 as separate classes. |
+| L19 | Actual elevation angle varies per radial within a nominal cut (e.g. KTLX nominal 0.5 deg cut spans 0.46-0.66 deg). Heights computed from nominal cut angles would be wrong by tens of metres at long range. | MITIGATED | Per-radial elevation is used everywhere (verified equal to spec reader). |
+| L20 | Antenna altitude = site height (MSL) + tower height (AGL). The ICD calls the second field tower height; Py-ART calls it feedhorn_height and xradar reports altitude 69 m for KDIX (45 + 24). Consistent across tools, not stated by the ICD as the feedhorn altitude. | OPEN | Recorded in case.json and manifest as an assumption. |
+| L21 | Test files from this era are gzip-wrapped raw message streams, not LDM-bzip2 records; the spec reader handles both but only the raw form is exercised by real data. | KNOWN | See L17. |
+| L22 | wradlib's `bin_altitude` uses R+a (antenna inside the sphere) vs the Doviak-form used here (z + a): heights differ by 0.57 m (KTLX) and 0.10 m (KDIX) at most. | KNOWN, quantified | Reported as a data-processing difference, not an error. |
+| L23 | Geoid: EGM2008 undulation at the radar sites is -27.5 m (KTLX) and -33.6 m (KDIX); a second published model (EGM96) agrees to 0.03 m and 0.13 m. This is a sanity check only; no independent calculator or benchmark has been used, and the geoid behind the ICD's mean-sea-level site height is unidentified. | OPEN | See L7. |
+| L24 | Beam width is not decoded or applied; `beamwidth_deg` is NaN in every sample. Sample-volume geometry for rendering is therefore not yet available. | OPEN | Phase 5 prerequisite (see L14). |
 
-Implementation vs validation status: **nothing implemented, nothing validated.**
+Implementation vs validation status: see `docs/VALIDATION_STATUS.md`.

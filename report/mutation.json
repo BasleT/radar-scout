@@ -1,0 +1,42 @@
+[
+ {
+  "mutation": "effective-radius factor changed",
+  "file": "engine/geometry.py",
+  "result": "KILLED"
+ },
+ {
+  "mutation": "antenna altitude dropped",
+  "file": "engine/geometry.py",
+  "result": "KILLED"
+ },
+ {
+  "mutation": "azimuth offset 0.01 deg",
+  "file": "engine/geometry.py",
+  "result": "KILLED"
+ },
+ {
+  "mutation": "elevation left in degrees",
+  "file": "engine/geometry.py",
+  "result": "KILLED"
+ },
+ {
+  "mutation": "dBZ offset sign flipped",
+  "file": "engine/samples.py",
+  "result": "KILLED"
+ },
+ {
+  "mutation": "range-folded code wrong",
+  "file": "engine/samples.py",
+  "result": "KILLED"
+ },
+ {
+  "mutation": "tower height dropped",
+  "file": "engine/decode.py",
+  "result": "KILLED"
+ },
+ {
+  "mutation": "gate range shifted by half a gate",
+  "file": "engine/samples.py",
+  "result": "KILLED"
+ }
+]

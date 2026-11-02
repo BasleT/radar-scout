@@ -1,6 +1,6 @@
 # ARCHITECTURE.md — Scientifically Verifiable 3D NEXRAD Visualization
 
-Status: **Phase 1 (research and design). No application code exists yet.**
+Status: **Phases 1-4 done (research, fixtures, engine, tests). No viewer code yet. See docs/VALIDATION_STATUS.md.**
 Scope: single desktop application (Tauri 2 + TypeScript + CesiumJS) on the Windows development host, with the Python/Py-ART engine as the reference processor. No mobile or cross-platform targets.
 Date: 2026-11-02
 
