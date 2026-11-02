@@ -1,0 +1,100 @@
+
+
+{
+ "KTLX20130520_195111_V06.gz": {
+  "file": "data/raw/KTLX20130520_195111_V06.gz",
+  "pyart_vs_spec": {
+   "n_radials_r1": 8280,
+   "n_radials_pyart": 8280,
+   "raw_mismatch_gates": 0,
+   "gates_compared": 9480960,
+   "radials_with_ngates_mismatch": 0,
+   "azimuth_max_abs_diff_deg": 0.0,
+   "elevation_max_abs_diff_deg": 0.0,
+   "time_mismatch_radials": 0,
+   "scale_offset_mismatch_radials": 0,
+   "gate_geom_mismatch_radials": 0,
+   "pyart_location": [
+    35.33305740356445,
+    -97.27748107910156,
+    388.0
+   ],
+   "r1_location": [
+    35.33305740356445,
+    -97.27748107910156,
+    388
+   ]
+  },
+  "xradar_vs_spec": {
+   "sweeps": 17,
+   "rays": 8280,
+   "rays_unmatched": 0,
+   "gates_compared": 9480960,
+   "dbz_mismatch_gates": 0,
+   "max_abs_dbz_diff": 0.0,
+   "azimuth_max_abs_diff_deg": 0.0,
+   "elevation_max_abs_diff_deg": 0.0,
+   "range_mismatch_rays": 0,
+   "xradar_low_gate_values": {
+    "N=0": {
+     "n": 7763961,
+     "nan": 0,
+     "equals_(N-off)/scale": 7763961
+    },
+    "N=1": {
+     "n": 31785,
+     "nan": 0,
+     "equals_(N-off)/scale": 31785
+    }
+   }
+  }
+ },
+ "KDIX20140430_120023_V06.gz": {
+  "file": "data/raw/KDIX20140430_120023_V06.gz",
+  "pyart_vs_spec": {
+   "n_radials_r1": 5400,
+   "n_radials_pyart": 5400,
+   "raw_mismatch_gates": 0,
+   "gates_compared": 6104160,
+   "radials_with_ngates_mismatch": 0,
+   "azimuth_max_abs_diff_deg": 0.0,
+   "elevation_max_abs_diff_deg": 0.0,
+   "time_mismatch_radials": 0,
+   "scale_offset_mismatch_radials": 0,
+   "gate_geom_mismatch_radials": 0,
+   "pyart_location": [
+    39.94694519042969,
+    -74.41072082519531,
+    69.0
+   ],
+   "r1_location": [
+    39.94694519042969,
+    -74.41072082519531,
+    69
+   ]
+  },
+  "xradar_vs_spec": {
+   "sweeps": 11,
+   "rays": 5400,
+   "rays_unmatched": 0,
+   "gates_compared": 6104160,
+   "dbz_mismatch_gates": 0,
+   "max_abs_dbz_diff": 0.0,
+   "azimuth_max_abs_diff_deg": 0.0,
+   "elevation_max_abs_diff_deg": 0.0,
+   "range_mismatch_rays": 0,
+   "xradar_low_gate_values": {
+    "N=0": {
+     "n": 3894355,
+     "nan": 0,
+     "equals_(N-off)/scale": 3894355
+    },
+    "N=1": {
+     "n": 212451,
+     "nan": 0,
+     "equals_(N-off)/scale": 212451
+    }
+   }
+  }
+ }
+}

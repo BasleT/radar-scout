@@ -1,4 +1,10 @@
-docs/sources/*.pdf
+data/raw/
+scratch/
+.venv/
+out/
 __pycache__/
 *.pyc
+report/junit.xml
+report/metrics.json
+docs/sources/*.pdf
 node_modules/

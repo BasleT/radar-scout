@@ -1,0 +1,218 @@
+{
+  "case": "KDIX_20140430_120023",
+  "role": "widespread precipitation, low fraction of high dBZ (case A)",
+  "station": "KDIX",
+  "source_bucket": "unidata-nexrad-level2",
+  "source_key": "2014/04/30/KDIX/KDIX20140430_120023_V06.gz",
+  "source_url": "https://unidata-nexrad-level2.s3.amazonaws.com/2014/04/30/KDIX/KDIX20140430_120023_V06.gz",
+  "local_file": "data/raw/KDIX20140430_120023_V06.gz",
+  "sha256": "f384c447d06bb96b8fda9d37df3da8f520a7dbdf472bd45472e6ecdc0f108f77",
+  "size_bytes": 7410800,
+  "container": "raw-messages",
+  "volume_header": {
+    "tape": "AR2V0006.",
+    "ext": "185",
+    "julian": 16191,
+    "ms": 43225000,
+    "icao": "KDIX"
+  },
+  "n_radials": 5400,
+  "message_counts": {
+    "15": 5,
+    "13": 49,
+    "18": 4,
+    "3": 1,
+    "5": 1,
+    "2": 3,
+    "31": 5400
+  },
+  "first_radial_time_utc": "2014-04-30T12:00:23.097000+00:00",
+  "last_radial_time_utc": "2014-04-30T12:06:01.043000+00:00",
+  "radar": {
+    "lat": 39.94694519042969,
+    "lon": -74.41072082519531,
+    "site_height_m_msl": 45,
+    "tower_height_m_agl": 24,
+    "assumed_antenna_msl_m": 69,
+    "assumption": "antenna MSL = site height + tower height (ICD Table XVII-E; Py-ART names the tower field 'feedhorn_height'); not independently verified"
+  },
+  "ref_scale_offset": [
+    2.0,
+    66.0
+  ],
+  "sweeps": {
+    "1": {
+      "first_radial_index": 0,
+      "n_radials": 720,
+      "elev_min": 0.406494140625,
+      "elev_max": 0.66741943359375,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "ZDR"
+      ]
+    },
+    "2": {
+      "first_radial_index": 720,
+      "n_radials": 720,
+      "elev_min": 0.41748046875,
+      "elev_max": 0.50811767578125,
+      "moments": [
+        "REF",
+        "SW ",
+        "VEL"
+      ]
+    },
+    "3": {
+      "first_radial_index": 1440,
+      "n_radials": 720,
+      "elev_min": 1.26617431640625,
+      "elev_max": 1.4666748046875,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "ZDR"
+      ]
+    },
+    "4": {
+      "first_radial_index": 2160,
+      "n_radials": 720,
+      "elev_min": 1.373291015625,
+      "elev_max": 1.48040771484375,
+      "moments": [
+        "REF",
+        "SW ",
+        "VEL"
+      ]
+    },
+    "5": {
+      "first_radial_index": 2880,
+      "n_radials": 360,
+      "elev_min": 2.35382080078125,
+      "elev_max": 2.44720458984375,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "SW ",
+        "VEL",
+        "ZDR"
+      ]
+    },
+    "6": {
+      "first_radial_index": 3240,
+      "n_radials": 360,
+      "elev_min": 3.30963134765625,
+      "elev_max": 3.44970703125,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "SW ",
+        "VEL",
+        "ZDR"
+      ]
+    },
+    "7": {
+      "first_radial_index": 3600,
+      "n_radials": 360,
+      "elev_min": 4.229736328125,
+      "elev_max": 4.32861328125,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "SW ",
+        "VEL",
+        "ZDR"
+      ]
+    },
+    "8": {
+      "first_radial_index": 3960,
+      "n_radials": 360,
+      "elev_min": 5.95733642578125,
+      "elev_max": 6.08367919921875,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "SW ",
+        "VEL",
+        "ZDR"
+      ]
+    },
+    "9": {
+      "first_radial_index": 4320,
+      "n_radials": 360,
+      "elev_min": 9.79705810546875,
+      "elev_max": 9.9261474609375,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "SW ",
+        "VEL",
+        "ZDR"
+      ]
+    },
+    "10": {
+      "first_radial_index": 4680,
+      "n_radials": 360,
+      "elev_min": 14.490966796875,
+      "elev_max": 14.65576171875,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "SW ",
+        "VEL",
+        "ZDR"
+      ]
+    },
+    "11": {
+      "first_radial_index": 5040,
+      "n_radials": 360,
+      "elev_min": 19.34967041015625,
+      "elev_max": 19.54742431640625,
+      "moments": [
+        "PHI",
+        "REF",
+        "RHO",
+        "SW ",
+        "VEL",
+        "ZDR"
+      ]
+    }
+  },
+  "model": {
+    "effective_earth_radius_factor": "4/3",
+    "earth_radius_m": 6371000,
+    "reference": "Doviak & Zrnic 1993 Eq. 2.28 via Py-ART/wradlib docs"
+  },
+  "raw_samples": {
+    "n": 209,
+    "value_populations_in_volume": {
+      "0": 3894355,
+      "1": 212451,
+      "rowmax": 6469
+    }
+  },
+  "cross_section_azimuths_deg": [
+    171.771,
+    261.771
+  ],
+  "cross_section_anchor": {
+    "radial_index": 233,
+    "gate_idx": 413,
+    "raw_N": 167
+  },
+  "echo_top_definition": "highest beam-centre height (MSL) among MEASURED gates with raw_N >= T*scale+offset in the nearest radial (<=1 deg) of each elevation on the section azimuth, per 2000 m ground-arc window. NOT an interpolated or physical echo top.",
+  "threshold_integer_criterion": {
+    "20": 106,
+    "30": 126,
+    "40": 146,
+    "50": 166
+  }
+}

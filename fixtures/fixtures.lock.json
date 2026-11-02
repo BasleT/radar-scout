@@ -1,0 +1,20 @@
+{
+  "KTLX_20130520_195111": {
+    "case.json": "4947b8cf363c014bae18a0c2dc047ae1236049753823ba6136a8cdb63aa5ab5c",
+    "cross_section_ref.csv": "134f0c2e7678b100e158224753a20aa0ce09438fee767510213122f82763421d",
+    "echo_top_ref.csv": "5269803faf6a2452cc55224b4d4fa7832b45e87a59c053f616503a8f6fceca6b",
+    "expected_geo.csv": "954ec5c3f6c5a2d014f517ee31e0d20268bf9bd71b34a738362d725165708504",
+    "radial_geometry.csv": "2d8a15bff54533e94eb5dbeaf347a0b2fd6bd8c8f844aa55540aaa21dc7b5e1e",
+    "raw_samples.csv": "fde38b1554f756ba615d55856d5e86726862db988259117eec757c6a7c980cd8",
+    "_source_sha256": "d41dcfa4c7db1b72bd5c0399df7931afca6cfe4b5ee1633f79956da974f2dd19"
+  },
+  "KDIX_20140430_120023": {
+    "case.json": "d6fb21002cd8fcaea1bcbfeeea92dc6408662c1d0b4f399beadec7641cd7e2fb",
+    "cross_section_ref.csv": "05a1414d2763cf9e14d2d97df607fad46c902464cc4e2cc6d48784ec537fce7a",
+    "echo_top_ref.csv": "58c71253685f2af778374eff24fbe699c019d9748eff19f20711b69a11296768",
+    "expected_geo.csv": "10aa33b69b6ea17e6838ca0e1381f9b6b649ef8056aebe9032cd0370b1d3838e",
+    "radial_geometry.csv": "4a003db6b735b9182ccc1954dd5f171407a053f26c37a2ffacdca170f91778d4",
+    "raw_samples.csv": "9ccca7403ada7fcfe916ebf23ca3f5590565e58658619bd591bc67008e6efca0",
+    "_source_sha256": "f384c447d06bb96b8fda9d37df3da8f520a7dbdf472bd45472e6ecdc0f108f77"
+  }
+}
