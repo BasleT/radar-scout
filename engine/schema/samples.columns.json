@@ -1,0 +1,17 @@
+{
+  "description": "Required columns of samples.parquet. Every column is mandatory; data_class has no default.",
+  "data_class_enum": ["MEASURED", "BELOW_THRESHOLD", "RANGE_FOLDED", "NOT_SCANNED", "INTERPOLATED", "EXTRAPOLATED"],
+  "engine_emits_only": ["MEASURED", "BELOW_THRESHOLD", "RANGE_FOLDED"],
+  "columns": {
+    "radial_index": "int32", "gate_idx": "int32", "raw_N": "uint16", "data_class": "object",
+    "source_sha256": "object", "elevation_number": "int16", "radial_number": "int32", "scale": "float64",
+    "offset": "float64", "dbz": "float64", "azimuth_deg": "float64", "elevation_deg": "float64",
+    "radial_time_ms_utc": "int64", "slant_range_m": "float64", "ground_arc_m": "float64",
+    "z_above_antenna_m": "float64", "height_msl_m": "float64", "lat_deg": "float64", "lon_deg": "float64",
+    "beamwidth_deg": "float64", "geoid_undulation_m": "float64", "height_ellipsoid_m": "float64",
+    "chain_id": "object"
+  },
+  "non_null": ["radial_index", "gate_idx", "raw_N", "data_class", "source_sha256", "scale", "offset",
+               "azimuth_deg", "elevation_deg", "radial_time_ms_utc", "slant_range_m", "height_msl_m",
+               "lat_deg", "lon_deg", "chain_id"]
+}

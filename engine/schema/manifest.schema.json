@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Engine volume manifest",
+  "type": "object",
+  "required": ["schema_version", "engine_version", "source", "station", "radar", "volume_time_utc", "n_radials",
+               "n_samples", "included_classes", "model", "geoid", "interpolation", "transform_chains", "software"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "engine_version": {"type": "string"},
+    "source": {
+      "type": "object",
+      "required": ["file", "sha256", "size_bytes"],
+      "properties": {
+        "file": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size_bytes": {"type": "integer", "minimum": 1},
+        "s3_etag": {"type": ["string", "null"]},
+        "url": {"type": ["string", "null"]}
+      }
+    },
+    "station": {"type": "string", "minLength": 4, "maxLength": 4},
+    "radar": {
+      "type": "object",
+      "required": ["lat", "lon", "site_height_m_msl", "tower_height_m_agl", "antenna_height_m_msl",
+                   "antenna_height_assumption"]
+    },
+    "included_classes": {
+      "type": "array",
+      "items": {"enum": ["MEASURED", "BELOW_THRESHOLD", "RANGE_FOLDED"]},
+      "minItems": 1
+    },
+    "interpolation": {"const": "none"},
+    "model": {"type": "object", "required": ["ke", "re_m", "horizontal"]},
+    "geoid": {"type": "object", "required": ["model", "status"]},
+    "transform_chains": {"type": "object", "minProperties": 1}
+  }
+}
