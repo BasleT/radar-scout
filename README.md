@@ -8,6 +8,8 @@ see `report/validation_report.md`, `SCIENTIFIC_LIMITATIONS.md`, `docs/VALIDATION
 - `viewer/` TypeScript + CesiumJS, wrapped by Tauri 2 for Android and Windows
 - `scripts/` local client builds; `.github/workflows/release.yml` builds the clients in CI
 
+Current plan, requirements and roadmap: `docs/PLAN_V2.md`.
+
 ## What the app shows
 Products from the engine: reflectivity, radial velocity, spectrum width, ZDR, differential phase, correlation
 coefficient. KPI cards, 3D globe and top-down map views, per-sweep filter, cross-section, recorded-extent outlines,

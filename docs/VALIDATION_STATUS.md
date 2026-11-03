@@ -26,3 +26,10 @@ Cases: KTLX20130520_195111_V06 (sha256 d41dcfa4...), KDIX20140430_120023_V06 (sh
 | Android debug APK / Windows exe | build scripts + CI workflow | APK build result recorded in the commit message; not installed or run on a device | NOT validated |
 | Inspection mode (Phase 6) | minimal click panel (class, dBZ, raw N, position, heights, source indices) | none; no link back to the original source bytes yet | NOT validated |
 | External product comparison (WCT, MRMS, GridRad) | no | - | Phase 7, INCOMPLETE |
+| Volume render v1 (`drawVolume`, viewer-side voxel max-binning) | yes, first version | desktop browser look on the KDIX 2014 fixture only; no check of voxel values against gates | NOT validated; to be replaced by engine R5 (L30) |
+| Filled sweeps / cones (PLAN_V2 R1, R12) | no | - | PLANNED |
+| Engine-built 3D grid and iso-surface (R5, R6) | no | - | PLANNED (L31) |
+| Storm library El Reno/Moore (R2) | no | - | PLANNED |
+| Level III products (R10) | no | bucket listing seen only | PLANNED (L32) |
+| Velocity dealiasing / SRM (R7), SAILS (R8) | no | - | PLANNED (L33, L34) |
+

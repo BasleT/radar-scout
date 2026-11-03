@@ -156,6 +156,16 @@ Rules:
 - **Clients:** one TypeScript/CesiumJS viewer (`viewer/`), built as a web app and wrapped by Tauri 2 for Windows and Android. The only configuration is a server URL. Android webview (System WebView) and Windows WebView2 differ in WebGL2 limits; neither is verified for Cesium yet **[UNVERIFIED]**.
 - **Viewer-ready artifact (`viewer.json` + `gates.bin`):** derived from `samples.parquet` by `engine/viewer_export.py`. It keeps only MEASURED gates at or above a stated dBZ threshold, so it is a **reduction, not a new measurement**. The manifest states the threshold, the number of gates dropped, and the source SHA-256. Positions are the engine's float64 values, unchanged.
 
+### Rendering and derived data (added 2026-11-03; see docs/PLAN_V2.md)
+- The viewer only draws prepared artifacts. Anything that is a calculation on the data (resampling to a 3D grid, binning,
+  dealiasing, derived products) belongs to the engine on pve1 and is recorded in the manifest.
+- Render families: **Points** (exact per gate, default), **Cones** (one polar byte texture per elevation cut plus a
+  coarse positional mesh from the engine geometry, palette in a separate texture), and **derived volume modes** (voxel
+  blocks, smooth volume, iso-surface) that read an engine-built storm-centred Cartesian grid. Derived modes are labelled
+  DERIVED/INTERPOLATED; the earlier viewer-side voxel binning is a known deviation (L30).
+- NWS Level III products (echo tops, VIL, KDP, hydrometeor class, storm tracks) are fetched as published and labelled with
+  their NWS product code; they are not recomputed here.
+
 ### Application shell
 - **Tauri 2 + TypeScript + CesiumJS**, targets Windows desktop and Android. iOS, macOS and Linux desktop are not targeted. Tauri on Windows renders in the system WebView2 **[UNVERIFIED in this session: Cesium WebGL2 behavior inside WebView2 must be checked in a Phase 5 spike before the shell choice is final. The fallback is a plain browser tab served locally, which needs no architectural change.]**
 - The shell is thin. It opens engine artifacts from disk (§5), hosts the viewer, and gives access to the original source file for the Phase 6 "retrieve original measurement" feature.
