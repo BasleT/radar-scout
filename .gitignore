@@ -8,3 +8,12 @@ report/junit.xml
 report/metrics.json
 docs/sources/*.pdf
 node_modules/
+viewer/dist/
+viewer/public/cesium/
+viewer/src-tauri/target/
+viewer/src-tauri/gen/android/.gradle/
+viewer/src-tauri/gen/android/app/build/
+viewer/src-tauri/gen/android/local.properties
+server/.env
+*.keystore
+viewer/src-tauri/gen/android/.kotlin/

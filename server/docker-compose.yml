@@ -1,0 +1,23 @@
+services:
+  engine:
+    build: { context: .., dockerfile: server/Dockerfile.engine }
+    restart: unless-stopped
+    environment:
+      STATION: ${STATION:-KTLX}
+      BUCKET_URL: ${BUCKET_URL:-https://noaa-nexrad-level2.s3.amazonaws.com}
+      POLL_SECONDS: ${POLL_SECONDS:-300}
+      KEEP_VOLUMES: ${KEEP_VOLUMES:-6}
+    volumes:
+      - radar-web:/var/radar/web
+      - radar-raw:/var/radar/raw
+      - radar-work:/var/radar/work
+  web:
+    build: { context: .., dockerfile: server/Dockerfile.web }
+    restart: unless-stopped
+    ports: ["${WEB_PORT:-8080}:80"]
+    volumes:
+      - radar-web:/var/radar/web:ro
+volumes:
+  radar-web:
+  radar-raw:
+  radar-work:

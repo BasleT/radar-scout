@@ -1,0 +1,9 @@
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.lock.txt .
+RUN pip install --no-cache-dir -r requirements.lock.txt
+COPY engine ./engine
+ENV PROJ_NETWORK=ON PYTHONUNBUFFERED=1
+COPY server/engine-loop.sh /usr/local/bin/engine-loop.sh
+RUN chmod +x /usr/local/bin/engine-loop.sh
+CMD ["engine-loop.sh"]

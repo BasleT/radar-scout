@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Radar Scout</title>
+<link rel="stylesheet" href="./cesium/Widgets/widgets.css" />
+<style>
+  /* Dark-only, Vercel-style: near-black surfaces, 1px hairlines, white primary action, mono numerals. */
+  :root { color-scheme:dark; --bg:#000; --fg:#ededed; --mut:#8f8f8f; --panel:rgba(10,10,10,.92); --line:#262626; --warn:#f5a623; --acc:#fff; --card:#111; --ok:#50e3c2; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:14px/1.4 Geist, Inter, system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; -webkit-font-smoothing:antialiased; }
+  .kpi b, td, #age, #tlabel, #xsinfo { font-family:"Geist Mono", ui-monospace, "SF Mono", Consolas, monospace; }
+  .panel, #bar { backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+  #cesium { position:fixed; inset:0; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; }
+  #bar { position:fixed; top:0; left:0; right:0; padding:max(6px, env(safe-area-inset-top)) 10px 6px; background:var(--panel); border-bottom:1px solid var(--line); z-index:5; }
+  #bar .row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  #title { font-weight:700; font-size:15px; } #sub { color:var(--mut); font-size:12px; }
+  #kpis { display:flex; gap:8px; overflow-x:auto; padding:6px 0 2px; -webkit-overflow-scrolling:touch; }
+  .kpi { flex:0 0 auto; min-width:104px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:6px 10px; }
+  .kpi b { display:block; font-size:19px; font-variant-numeric:tabular-nums; } .kpi span { color:var(--mut); font-size:11px; }
+  #views { position:fixed; right:8px; top:150px; z-index:4; display:flex; flex-direction:column; gap:6px; }
+  #views button { min-width:48px; }
+  #legend { position:fixed; left:8px; top:150px; z-index:4; padding:6px 8px; font-size:12px; }
+  #sheet { position:fixed; left:0; right:0; bottom:0; z-index:6; max-height:42vh; display:flex; flex-direction:column; border-radius:14px 14px 0 0; padding-bottom:env(safe-area-inset-bottom); transition:max-height .15s; }
+  #sheet.min { max-height:46px; overflow:hidden; }
+  #tabs { display:flex; gap:4px; padding:6px 8px; border-bottom:1px solid var(--line); }
+  #tabs button { flex:1; background:transparent; border:0; border-radius:8px; color:var(--mut); }
+  #tabs button.on { background:var(--card); color:var(--fg); font-weight:600; }
+  #tabs .grip { flex:0 0 40px; }
+  .tab { display:none; padding:8px 12px 12px; overflow-y:auto; } .tab.on { display:block; }
+  #inspect { position:fixed; left:8px; right:8px; bottom:calc(42vh + 8px); z-index:7; display:none; padding:8px 10px; font-variant-numeric:tabular-nums; max-width:420px; }
+  #xs { position:fixed; right:8px; top:150px; z-index:4; display:none; padding:6px; margin-right:56px; }
+  input, button, select { font:inherit; min-height:38px; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:8px; padding:0 8px; }
+  input[type=range] { padding:0; width:100%; } input[type=checkbox] { min-height:0; width:auto; }
+  label { display:block; margin-top:8px; color:var(--mut); font-size:12px; } label > input:not([type=checkbox]), label > select { display:block; width:100%; margin-top:2px; color:var(--fg); }
+  button { cursor:pointer; } button:hover { border-color:#4d4d4d; }
+  button.pri { background:var(--acc); color:#000; border-color:var(--acc); font-weight:600; }
+  input:focus, select:focus, button:focus-visible { outline:2px solid #fff; outline-offset:1px; }
+  .kpi { border-radius:8px; } .kpi b { font-size:20px; font-weight:600; letter-spacing:-.02em; }
+  #age::before { content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--ok); margin-right:6px; vertical-align:1px; }
+  #tabs button.on { background:#1c1c1c; }
+  table { border-collapse:collapse; } td { padding:1px 8px 1px 0; vertical-align:top; } td:first-child { color:var(--mut); }
+  .sw { display:inline-block; width:12px; height:12px; margin-right:6px; vertical-align:-1px; border:1px solid var(--line); }
+  #err { color:#b3261e; margin-top:6px; } #banner { color:var(--warn); font-size:12px; margin-top:8px; }
+  .small { font-size:12px; color:var(--mut); }
+  .cesium-viewer-bottom, .cesium-widget-credits { display:none !important; }
+</style>
+</head>
+<body>
+<div id="cesium"></div>
+
+<div id="bar">
+  <div class="row"><div><div id="title">Radar Scout</div><div id="sub">No data loaded</div></div><div id="age" class="small"></div></div>
+  <div id="kpis"></div>
+</div>
+
+<div id="views">
+  <button id="v3d" class="pri" title="3D view">3D</button>
+  <button id="v2d" title="Top-down map">Map</button>
+  <button id="home" title="Recentre on radar">⌖</button>
+</div>
+<div id="legend" class="panel"></div>
+<div id="xs" class="panel">
+  <b style="font-size:12px">Section: ground arc vs beam-centre height (MSL)</b><br>
+  <canvas id="xsc" width="320" height="190"></canvas>
+  <div id="xsinfo" class="small"></div>
+</div>
+<div id="inspect" class="panel"></div>
+
+<div id="sheet" class="panel">
+  <div id="tabs">
+    <button class="grip" id="grip" title="Collapse / expand">⌄</button>
+    <button data-tab="layers" class="on">Layers</button>
+    <button data-tab="section">Section</button>
+    <button data-tab="time">Time</button>
+    <button data-tab="info">Info</button>
+  </div>
+
+  <div class="tab on" id="t-layers">
+    <label>Product
+      <select id="product"><option value="REF" selected>Reflectivity (REF), dBZ</option></select>
+    </label>
+    <label>Min value shown <select id="thr"><option>20</option><option selected>30</option><option>40</option><option>50</option></select></label>
+    <label>Sweep <select id="sweep"><option value="">All sweeps</option></select></label>
+    <label>Opacity <input id="alpha" type="range" min="0.1" max="1" step="0.05" value="0.9" /></label>
+    <label>Vertical exaggeration <select id="vex"><option value="1" selected>1× (true scale)</option><option value="2">2×</option><option value="5">5×</option></select></label>
+    <label><input id="cov" type="checkbox" /> Recorded-extent outline per cut</label>
+    <div id="covinfo" class="small"></div>
+  </div>
+
+  <div class="tab" id="t-section">
+    <label>Azimuth (°) <input id="xaz" type="number" min="0" max="359.99" step="0.1" placeholder="e.g. 270" /></label>
+    <label>Half-width (°) <input id="xhw" type="number" min="0.1" max="5" step="0.1" value="0.5" /></label>
+    <div style="margin-top:8px"><button id="xgo" class="pri">Show section</button> <button id="xclear">All gates</button></div>
+    <div class="small" style="margin-top:6px">Selects the engine's radials within the azimuth window and plots their stored ground arc and height. Nothing is interpolated.</div>
+  </div>
+
+  <div class="tab" id="t-time">
+    <label>Volume <input id="tsl" type="range" min="0" max="0" step="1" value="0" disabled /></label>
+    <div style="margin-top:8px"><button id="play" disabled>Play</button> <span id="tlabel" class="small"></span></div>
+    <div class="small" style="margin-top:6px">Each step is a separate volume scan (several minutes apart). Frames are not blended.</div>
+  </div>
+
+  <div class="tab" id="t-info">
+    <div id="meta" class="small">No data loaded.</div>
+    <label>Server URL <input id="server" inputmode="url" autocapitalize="off" spellcheck="false" /></label>
+    <div style="margin-top:8px"><button id="load" class="pri">Load latest</button></div>
+    <div id="err"></div>
+    <div id="banner"></div>
+  </div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

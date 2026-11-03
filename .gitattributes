@@ -1,2 +1,5 @@
 fixtures/** -text
 docs/sources/** -text
+*.sh text eol=lf
+viewer/src-tauri/gen/android/gradlew text eol=lf
+server/Dockerfile.* text eol=lf

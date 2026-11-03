@@ -16,10 +16,51 @@ ROOT = os.path.abspath(os.path.dirname(__file__))
 REPORT = os.path.join(ROOT, "report")
 
 
+def fetch_data():
+    """Download any missing pinned source file and verify its SHA-256. A mismatch deletes the download and fails;
+    nothing else is ever substituted."""
+    import hashlib
+    import urllib.request
+    for case in sorted(os.listdir(os.path.join(ROOT, "fixtures"))):
+        p = os.path.join(ROOT, "fixtures", case, "case.json")
+        if not os.path.exists(p):
+            continue
+        c = json.load(open(p))
+        dst = os.path.join(ROOT, c["local_file"])
+        if not os.path.exists(dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            print("fetching", c["source_url"])
+            urllib.request.urlretrieve(c["source_url"], dst)
+        h = hashlib.sha256(open(dst, "rb").read()).hexdigest()
+        if h != c["sha256"]:
+            os.remove(dst)
+            sys.exit("SHA-256 mismatch for %s (got %s, pinned %s); download removed" % (c["local_file"], h, c["sha256"]))
+        print("verified", c["local_file"])
+
+
+def readiness(cases, metrics, mut):
+    """Verdict from explicit gates (VALIDATION_PLAN section 7). READY only if every gate passes."""
+    gates = [
+        ("no failed tests", not any(c["status"] == "failed" for c in cases)),
+        ("no metric exceeds its tolerance", not any(
+            m["tolerance"] is not None and isinstance(m["value"], (int, float)) and abs(m["value"]) > m["tolerance"]
+            for m in metrics)),
+        ("mutation check run and every injected bug detected", bool(mut) and all(m["result"] == "KILLED" for m in mut)),
+        ("no INCOMPLETE validation items", not any(c["status"] == "incomplete" for c in cases)),
+        ("viewer rendering validated on target webviews (WebView2, Android System WebView)", False),
+        ("fetch/publish validated on the Linux server against the live archive", False),
+        ("more than two real cases, including current-format (LDM-bzip2) files", False),
+    ]
+    return gates
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mutation", action="store_true")
+    ap.add_argument("--fetch", action="store_true", help="download and hash-verify the pinned source files first")
     a = ap.parse_args()
+    if a.fetch:
+        fetch_data()
     os.makedirs(REPORT, exist_ok=True)
     junit = os.path.join(REPORT, "junit.xml")
     rc = subprocess.call([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--junitxml", junit],
@@ -72,10 +113,14 @@ def main():
          ["- %s" % c["detail"] for c in cases if c["status"] == "incomplete"]
     if mut:
         L += ["", "## Mutation check", ""] + ["- %s (%s): **%s**" % (m["mutation"], m["file"], m["result"]) for m in mut]
-    L += ["", "## Readiness", "",
-          "**Not ready for scientifically credible use**: the visualization layer does not exist, several validation "
-          "items are INCOMPLETE (listed above), and see SCIENTIFIC_LIMITATIONS.md. Passing tests certify only the "
-          "documented transformations against the independent references named here."]
+    gates = readiness(cases, metrics, mut)
+    ok = all(g[1] for g in gates)
+    L += ["", "## Readiness", "", "| Gate | Met |", "|---|---|"] + ["| %s | %s |" % (n, "yes" if v else "**NO**") for n, v in gates]
+    L += ["", ("**Verdict: all gates met.**" if ok else
+               "**Verdict: NOT READY for scientifically credible use** (unmet gates above). See SCIENTIFIC_LIMITATIONS.md."),
+          "Passing tests certify only the documented transformations against the independent references named here."]
+    out["readiness"] = {"ready": ok, "gates": [{"gate": n, "met": v} for n, v in gates]}
+    json.dump(out, open(os.path.join(REPORT, "validation_report.json"), "w"), indent=1, default=str)
     open(os.path.join(REPORT, "validation_report.md"), "w", encoding="utf8").write("\n".join(L) + "\n")
     print("\n".join(L[:4]))
     return 0 if rc == 0 else 1

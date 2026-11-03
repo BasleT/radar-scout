@@ -1,7 +1,7 @@
 # ARCHITECTURE.md — Scientifically Verifiable 3D NEXRAD Visualization
 
 Status: **Phases 1-4 done (research, fixtures, engine, tests). No viewer code yet. See docs/VALIDATION_STATUS.md.**
-Scope: single desktop application (Tauri 2 + TypeScript + CesiumJS) on the Windows development host, with the Python/Py-ART engine as the reference processor. No mobile or cross-platform targets.
+Scope (revised 2026-11-02 by the user, replacing the desktop-only scope): a Python/Py-ART engine running on a server (Proxmox host `pve1`) that publishes static, schema-validated artifacts, plus a thin TypeScript + CesiumJS viewer wrapped by Tauri 2 for Windows desktop and Android. The viewer is also a plain web app that opens in any browser. See §6 "Deployment topology".
 Date: 2026-11-02
 
 Every factual claim is tagged with its verification status:
@@ -151,11 +151,16 @@ Rules:
   3. Iso-surfaces/marching cubes on an interpolated grid. This yields a smooth, plausible-looking surface that **implies a physical boundary and certainty the data do not support**. Allowed only as a clearly styled "DERIVED/INTERPOLATED" mode, off by default, with a persistent label.
 - Alternatives not chosen as the baseline: deck.gl, VTK/ParaView (strong for scientific volume work; good for the independent *reference* visualizations), and three.js. None change the engine design, because the engine/viewer boundary (§5) is renderer-neutral.
 
-### Application shell (scope: desktop only)
-- **Tauri 2 + TypeScript + CesiumJS**, as a single desktop application. Android, iOS, macOS and Linux are out of scope, and there are no cross-platform or mobile requirements. The development machine (Windows 11) is the only platform that is built and tested. Tauri on Windows renders in the system WebView2 **[UNVERIFIED in this session: Cesium WebGL2 behavior inside WebView2 must be checked in a Phase 5 spike before the shell choice is final. The fallback is a plain browser tab served locally, which needs no architectural change.]**
+### Deployment topology (revised 2026-11-02)
+- **Server (`pve1`, small Linux LXC/VM):** runs the engine on a schedule, writes per-volume artifact directories, and serves them as static files (`server/`). No API, no database, no accounts. Reach it over LAN/Tailscale, not the public internet. The Linux environment is **not yet exercised**: all validation so far ran on Windows (see docs/VALIDATION_STATUS.md).
+- **Clients:** one TypeScript/CesiumJS viewer (`viewer/`), built as a web app and wrapped by Tauri 2 for Windows and Android. The only configuration is a server URL. Android webview (System WebView) and Windows WebView2 differ in WebGL2 limits; neither is verified for Cesium yet **[UNVERIFIED]**.
+- **Viewer-ready artifact (`viewer.json` + `gates.bin`):** derived from `samples.parquet` by `engine/viewer_export.py`. It keeps only MEASURED gates at or above a stated dBZ threshold, so it is a **reduction, not a new measurement**. The manifest states the threshold, the number of gates dropped, and the source SHA-256. Positions are the engine's float64 values, unchanged.
+
+### Application shell
+- **Tauri 2 + TypeScript + CesiumJS**, targets Windows desktop and Android. iOS, macOS and Linux desktop are not targeted. Tauri on Windows renders in the system WebView2 **[UNVERIFIED in this session: Cesium WebGL2 behavior inside WebView2 must be checked in a Phase 5 spike before the shell choice is final. The fallback is a plain browser tab served locally, which needs no architectural change.]**
 - The shell is thin. It opens engine artifacts from disk (§5), hosts the viewer, and gives access to the original source file for the Phase 6 "retrieve original measurement" feature.
 - **No scientific code in Rust or JS.** All decoding, geometry and unit conversion stay in the Python engine, which is the single implementation. This avoids a second decoder that would need its own validation. The engine runs as a separate offline step (CLI), and the app does not embed Python. If on-the-fly processing is wanted later, it would call the engine as a subprocess, which is not planned.
-- Nothing here adds servers, cloud services, or accounts. Data is fetched from the public archive by the engine CLI.
+- No cloud services or accounts. Data is fetched from the public archive by the engine CLI on the server.
 
 ### Viewer constraints
 - TypeScript, strict mode; schema-validated loaders (JSON schema or zod) generated from the same schema the Python engine writes; **no recomputation of dBZ, heights, or coordinates in JS**.
@@ -172,7 +177,8 @@ engine/schema/     JSON schema (single source of truth for the artifacts)
 tests/reference/   independent from-spec readers & third-party-derived expected values (read-only fixtures)
 tests/synthetic/   mathematically known geometries (labelled synthetic)
 fixtures/          real data manifests (+ hashes); raw files fetched, not committed if large
-viewer/            TypeScript + CesiumJS, wrapped by Tauri 2 (src-tauri/ is shell glue only)
+viewer/            TypeScript + CesiumJS, wrapped by Tauri 2 (src-tauri/ is shell glue only; Windows + Android)
+server/            pve1 setup: systemd timer, nginx config, install script (not yet run on a real host)
 docs/sources/      archived primary spec excerpts + checksums
 validate.py        single reproducible validation command (Phase 8)
 ```
@@ -186,7 +192,8 @@ Environment notes: single supported platform is the Windows 11 development host,
 1. Which radar sites/cases? Proposed selection criteria are in `VALIDATION_PLAN.md` §2. No specific event has been selected, and I will not assume one exists in the archive until I have fetched its listing.
 2. Commit workflow: this directory is not a git repository. I propose `git init` and one commit per deliverable.
 3. A Cesium ion token for World Terrain is optional. Without it the viewer uses an ellipsoid-only globe.
-4. Scope is a desktop application on the Windows development host only. I interpreted "desktop only" as Windows, since that is the host. Say so if you want another desktop OS.
+4. (Superseded.) Scope was desktop-only on Windows.
+5. Scope revised by the user on 2026-11-02: server on `pve1` publishing static artifacts, Tauri 2 clients for Windows and Android, same viewer code in a browser.
 
 ## 9. Source list
 
