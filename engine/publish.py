@@ -22,11 +22,14 @@ from .samples import build_moment_samples
 from .viewer_export import export_viewer
 
 
+BUCKET_DEFAULT = "https://unidata-nexrad-level2.s3.amazonaws.com"
+
+
 def thr_dir(t):
     return "thr%g" % t
 
 
-def export_all_products(wdir, stage, vol):
+def export_all_products(wdir, stage, vol, skip_lowest_threshold=False):
     """<stage>/<PRODUCT>/thr<T>/ for every product present in the volume. REF comes from samples.parquet; the other
     moments are built in memory from the same decode (their full tables are not persisted; gates stay traceable by
     source SHA-256 + radial_index + gate_idx)."""
@@ -39,9 +42,10 @@ def export_all_products(wdir, stage, vol):
             df, status = build_moment_samples(vol, prod, include=("MEASURED",))
             if status != "ok" or df.empty:
                 raise RuntimeError("%s: no usable samples (geoid status %r)" % (prod, status))
-        for t in spec["thresholds"]:
+        ths = spec["thresholds"][1:] if skip_lowest_threshold else spec["thresholds"]
+        for t in ths:
             export_viewer(wdir, t, out_dir=os.path.join(stage, prod, thr_dir(t)), product=prod, df=df)
-        done.append({"id": prod, "label": spec["label"], "unit": spec["unit"], "thresholds": list(spec["thresholds"])})
+        done.append({"id": prod, "label": spec["label"], "unit": spec["unit"], "thresholds": list(ths)})
     return done
 
 
@@ -92,12 +96,13 @@ def write_index(web_data, station):
     os.replace(tmp, os.path.join(web_data, "index.json"))
 
 
-def publish(station, bucket_url, raw_cache, work, web_data, keep=6):
-    key, etag = newest_key(bucket_url, station)
+def publish_key(key, etag, bucket_url, raw_cache, work, out_root, skip_lowest_threshold=False):
+    """Download one known archive object, run the engine, and write <out_root>/<STATION>/<stamp>/. Returns the dir.
+    skip_lowest_threshold: omit each product's lowest display threshold (keeps case archives small)."""
+    station = key.split("/")[-1][:4]
     stamp = os.path.basename(key)
-    final = os.path.join(web_data, station, stamp)
+    final = os.path.join(out_root, station, stamp)
     if os.path.isdir(final):
-        print("already published:", stamp)
         return final
     os.makedirs(raw_cache, exist_ok=True)
     raw = os.path.join(raw_cache, stamp)
@@ -109,28 +114,38 @@ def publish(station, bucket_url, raw_cache, work, web_data, keep=6):
     shutil.rmtree(stage, ignore_errors=True)
     os.makedirs(stage)
     shutil.copy(os.path.join(wdir, "manifest.json"), stage)
-    prods = export_all_products(wdir, stage, load_volume(raw))
+    prods = export_all_products(wdir, stage, load_volume(raw), skip_lowest_threshold=skip_lowest_threshold)
     with open(os.path.join(stage, "products.json"), "w") as f:
         json.dump({"products": prods}, f)
     os.replace(stage, final)
+    shutil.rmtree(wdir, ignore_errors=True)
+    print("published", stamp, man["n_samples"], "samples")
+    return final
+
+
+def publish(station, bucket_url, raw_cache, work, web_data, keep=6):
+    key, etag = newest_key(bucket_url, station)
+    stamp = os.path.basename(key)
+    if os.path.isdir(os.path.join(web_data, station, stamp)):
+        print("already published:", stamp)
+        return os.path.join(web_data, station, stamp)
+    final = publish_key(key, etag, bucket_url, raw_cache, work, web_data)
     link = os.path.join(web_data, "latest")
     tmp_link = link + ".new"
     if os.path.lexists(tmp_link):
         os.remove(tmp_link)
     os.symlink(os.path.relpath(final, web_data), tmp_link)
     os.replace(tmp_link, link)
-    shutil.rmtree(wdir, ignore_errors=True)
     vols = sorted(os.listdir(os.path.join(web_data, station)))
     for old in vols[:-keep]:
         shutil.rmtree(os.path.join(web_data, station, old), ignore_errors=True)
     write_index(web_data, station)
-    print("published", stamp, man["n_samples"], "samples")
     return final
 
 
 def main():
     env = os.environ.get
-    publish(env("STATION", "KTLX"), env("BUCKET_URL", "https://noaa-nexrad-level2.s3.amazonaws.com"),
+    publish(env("STATION", "KTLX"), env("BUCKET_URL", BUCKET_DEFAULT),
             env("RAW_CACHE", "/var/radar/raw"), env("WORK_DIR", "/var/radar/work"), env("WEB_DATA", "/var/radar/web"),
             int(env("KEEP_VOLUMES", "6")))
 

@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       STATION: ${STATION:-KTLX}
-      BUCKET_URL: ${BUCKET_URL:-https://noaa-nexrad-level2.s3.amazonaws.com}
+      BUCKET_URL: ${BUCKET_URL:-https://unidata-nexrad-level2.s3.amazonaws.com}
       POLL_SECONDS: ${POLL_SECONDS:-300}
       KEEP_VOLUMES: ${KEEP_VOLUMES:-6}
     volumes:
