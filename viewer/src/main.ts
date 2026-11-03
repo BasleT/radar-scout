@@ -52,6 +52,7 @@ viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
 
 
 let points: Cesium.PointPrimitiveCollection | null = null;
+let cloud: Cesium.BillboardCollection | null = null;
 let covLines: Cesium.PolylineCollection | null = null;
 let art: Artifact | null = null;
 let radials: Radials | null = null;
@@ -79,7 +80,10 @@ const sweepSel = () => $<HTMLSelectElement>("sweep").value;
 function banner() {
   const k = vex();
   $("banner").innerHTML = (k !== 1 ? `<b>VERTICAL EXAGGERATION ${k}×: displayed heights are ${k}× ellipsoid height, NOT to scale.</b><br>` : "") +
-    "Measured gates only (selected product), drawn as points at beam-centre height (4/3 Earth model); sample volumes are not drawn (beam width not decoded). Not interpolated. Gates below the threshold, range-folded gates and unscanned regions are not drawn; their absence is not evidence of no echo. Not an operational or safety product.";
+    ($<HTMLSelectElement>("render").value === "volume"
+      ? "Volume render: gates are binned into 1.5 km × 0.75 km voxels, each drawn as one soft translucent sprite coloured by the MAXIMUM measured value of its gates (beam-centre heights, 4/3 Earth model). Voxel size is a display choice, not the radar's resolution; nothing is averaged or interpolated, and the soft look is only a rendering effect. "
+      : "Measured gates only (selected product), drawn as points at beam-centre height (4/3 Earth model); sample volumes are not drawn (beam width not decoded). Not interpolated. ") +
+    " Gates below the threshold, range-folded gates and unscanned regions are not drawn; their absence is not evidence of no echo. Not an operational or safety product.";
 }
 
 // ---- KPI cards: summaries (max / count) of the gates in the loaded artifact, not new measurements
@@ -124,8 +128,51 @@ function describe(a: Artifact) {
   if (cuts.map(String).includes(keep)) sel.value = keep;
 }
 
+// Soft round sprite for the volume render: a display device only (it is not an interpolation of the data).
+const sprite = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d")!, r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(0.55, "rgba(255,255,255,0.55)"); r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64); return c;
+})();
+
+// Display reduction for the volume render: gates are binned into a 3D voxel grid and each occupied voxel keeps the
+// MAXIMUM measured value among its gates (no averaging or smoothing; the value shown is one real gate's value).
+const VOX_H_M = 1500, VOX_V_M = 750;
+
+function drawVolume() {
+  const a = art!, k = vex(), sw = sweepSel(), al = alpha();
+  cloud = viewer.scene.primitives.add(new Cesium.BillboardCollection());
+  const rd = a.meta.radar, mLat = 111320, mLon = 111320 * Math.cos(rd.lat * Math.PI / 180);
+  const best = new Map<number, number>();
+  let used = 0;
+  for (let i = 0; i < a.n; i++) {
+    if (section && !section.has(a.radialIdx[i])) continue;
+    if (sw !== "" && a.elevNo[i] !== Number(sw)) continue;
+    used++;
+    const key = ((Math.floor((a.lon[i] - rd.lon) * mLon / VOX_H_M) + 1024) * 2048 + Math.floor((a.lat[i] - rd.lat) * mLat / VOX_H_M) + 1024) * 64 + Math.min(63, Math.max(0, Math.floor(a.hMsl[i] / VOX_V_M)));
+    const j = best.get(key);
+    if (j === undefined || a.value[i] > a.value[j]) best.set(key, i);
+  }
+  best.forEach((i) => {
+    const strength = Math.min(1, Math.max(0.12, (a.value[i] - 15) / 45));
+    const size = VOX_H_M * 1.7;
+    cloud!.add({
+      position: Cesium.Cartesian3.fromDegrees(a.lon[i], a.lat[i], a.hEll[i] * k), image: sprite, sizeInMeters: true,
+      width: size, height: size, id: i,
+      color: Cesium.Color.fromCssColorString(binHex(a.value[i])).withAlpha(0.5 * strength * al),
+    });
+  });
+  $("xsinfo").textContent = `${used.toLocaleString()} gates → ${best.size.toLocaleString()} voxels (${VOX_H_M} m × ${VOX_V_M} m, max value per voxel)`;
+}
+
 function draw() {
   if (!art) return;
+  if (cloud) { viewer.scene.primitives.remove(cloud); cloud = null; }
+  if ($<HTMLSelectElement>("render").value === "volume") {
+    if (points) { viewer.scene.primitives.remove(points); points = null; }
+    drawVolume(); banner(); drawCoverage(); return;
+  }
   const a = art, k = vex(), al = alpha(), sw = sweepSel(), ps = Number($<HTMLSelectElement>("psize").value);
   if (points) viewer.scene.primitives.remove(points);
   points = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
@@ -358,6 +405,7 @@ $("product").addEventListener("change", () => {
 $("alpha").addEventListener("input", draw);
 $("vex").addEventListener("change", draw);
 $("psize").addEventListener("change", draw);
+$("render").addEventListener("change", draw);
 $("sweep").addEventListener("change", draw);
 $("cov").addEventListener("change", drawCoverage);
 $("xgo").addEventListener("click", applySection);
