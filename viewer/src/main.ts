@@ -5,6 +5,7 @@
 (window as unknown as { CESIUM_BASE_URL: string }).CESIUM_BASE_URL = "./cesium/";
 
 import { buildCone, buildLut } from "./cones";
+import { buildCloud } from "./pointcloud";
 import * as Cesium from "cesium";
 import { loadArtifact, loadCoverage, loadIndex, loadRadials, loadSweep, loadSweepIndex, type Sweep, type Artifact, type Coverage, type Radials, type VolumeIndex } from "./artifact";
 
@@ -52,8 +53,9 @@ viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
 }));
 
 
-let points: Cesium.PointPrimitiveCollection | null = null;
-let cloud: Cesium.BillboardCollection | null = null;
+let cloud: Cesium.Primitive | null = null; // point or volume buffer
+let gateEcef: Float64Array | null = null; // ECEF of every loaded gate at the current exaggeration (display + tap-to-inspect)
+let gateEcefKey = "";
 let coneLayers: Cesium.Primitive[] = [];
 const sweepCache = new Map<string, Sweep[]>();
 let coneToken = 0;
@@ -86,7 +88,7 @@ function banner() {
   const k = vex();
   $("banner").innerHTML = (k !== 1 ? `<b>VERTICAL EXAGGERATION ${k}×: displayed heights are ${k}× ellipsoid height, NOT to scale.</b><br>` : "") +
     ($<HTMLSelectElement>("render").value === "cones"
-      ? "Cones: every cell is one decoded gate value from the sweep texture (nearest-neighbour, no smoothing), drawn on a mesh placed with the engine's 4/3-Earth beam geometry. Cell extent in azimuth is half the local radial spacing each side (a display extent, not the antenna beamwidth). Straight triangles between mesh knots stay within about 1 m of the beam curve. Gates are not interpolated between tilts. Tap-to-inspect works in Points mode only. "
+      ? "Cones: every cell is one decoded gate value from the sweep texture (nearest-neighbour, no smoothing), drawn on a mesh placed with the engine's 4/3-Earth beam geometry. Cell extent in azimuth is half the local radial spacing each side (a display extent, not the antenna beamwidth). Straight triangles between mesh knots stay within about 1 m of the beam curve. Gates are not interpolated between tilts. "
       : $<HTMLSelectElement>("render").value === "volume"
       ? "Volume render: gates are binned into 1.5 km × 0.75 km voxels, each drawn as one soft translucent sprite coloured by the MAXIMUM measured value of its gates (beam-centre heights, 4/3 Earth model). Voxel size is a display choice, not the radar's resolution; nothing is averaged or interpolated, and the soft look is only a rendering effect. "
       : "Measured gates only (selected product), drawn as points at beam-centre height (4/3 Earth model); sample volumes are not drawn (beam width not decoded). Not interpolated. ") +
@@ -135,21 +137,43 @@ function describe(a: Artifact) {
   if (cuts.map(String).includes(keep)) sel.value = keep;
 }
 
-// Soft round sprite for the volume render: a display device only (it is not an interpolation of the data).
-const sprite = (() => {
-  const c = document.createElement("canvas"); c.width = c.height = 64;
-  const g = c.getContext("2d")!, r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(0.55, "rgba(255,255,255,0.55)"); r.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = r; g.fillRect(0, 0, 64, 64); return c;
-})();
-
 // Display reduction for the volume render: gates are binned into a 3D voxel grid and each occupied voxel keeps the
 // MAXIMUM measured value among its gates (no averaging or smoothing; the value shown is one real gate's value).
+// This binning is a known deviation from "the viewer does no data processing" (SCIENTIFIC_LIMITATIONS L30).
 const VOX_H_M = 1500, VOX_V_M = 750;
 
+function ecefOf(a: Artifact, k: number): Float64Array {
+  const key = `${a.meta.source_sha256}|${a.meta.product}|${a.meta.reduction.threshold}|${a.n}|${k}`;
+  if (gateEcef && gateEcefKey === key) return gateEcef;
+  const out = new Float64Array(a.n * 3), t = new Cesium.Cartesian3();
+  for (let i = 0; i < a.n; i++) {
+    Cesium.Cartesian3.fromDegrees(a.lon[i], a.lat[i], a.hEll[i] * k, undefined, t);
+    out[i * 3] = t.x; out[i * 3 + 1] = t.y; out[i * 3 + 2] = t.z;
+  }
+  gateEcef = out; gateEcefKey = key;
+  return out;
+}
+
+function addCloud(a: Artifact, idx: ArrayLike<number>, n: number, mode: "points" | "volume", opts: { sizePx?: number; sizeM?: number }) {
+  const ecef = ecefOf(a, vex()), al = alpha();
+  const pos = new Float64Array(n * 3), rgba = new Uint8Array(n * 4);
+  const cache = new Map<string, Cesium.Color>();
+  for (let j = 0; j < n; j++) {
+    const i = idx[j];
+    pos[j * 3] = ecef[i * 3]; pos[j * 3 + 1] = ecef[i * 3 + 1]; pos[j * 3 + 2] = ecef[i * 3 + 2];
+    const hex = binHex(a.value[i]);
+    let c = cache.get(hex);
+    if (!c) { c = Cesium.Color.fromCssColorString(hex); cache.set(hex, c); }
+    const strength = mode === "volume" ? Math.min(1, Math.max(0.12, (a.value[i] - 15) / 45)) * 0.5 : 1;
+    rgba[j * 4] = Math.round(c.red * 255); rgba[j * 4 + 1] = Math.round(c.green * 255); rgba[j * 4 + 2] = Math.round(c.blue * 255);
+    rgba[j * 4 + 3] = Math.round(255 * al * strength);
+  }
+  const center = Cesium.Cartesian3.fromDegrees(a.meta.radar.lon, a.meta.radar.lat, 0);
+  cloud = viewer.scene.primitives.add(buildCloud(pos, rgba, { mode, center, ...opts }));
+}
+
 function drawVolume() {
-  const a = art!, k = vex(), sw = sweepSel(), al = alpha();
-  cloud = viewer.scene.primitives.add(new Cesium.BillboardCollection());
+  const a = art!, sw = sweepSel();
   const rd = a.meta.radar, mLat = 111320, mLon = 111320 * Math.cos(rd.lat * Math.PI / 180);
   const best = new Map<number, number>();
   let used = 0;
@@ -161,16 +185,22 @@ function drawVolume() {
     const j = best.get(key);
     if (j === undefined || a.value[i] > a.value[j]) best.set(key, i);
   }
-  best.forEach((i) => {
-    const strength = Math.min(1, Math.max(0.12, (a.value[i] - 15) / 45));
-    const size = VOX_H_M * 1.7;
-    cloud!.add({
-      position: Cesium.Cartesian3.fromDegrees(a.lon[i], a.lat[i], a.hEll[i] * k), image: sprite, sizeInMeters: true,
-      width: size, height: size, id: i,
-      color: Cesium.Color.fromCssColorString(binHex(a.value[i])).withAlpha(0.5 * strength * al),
-    });
-  });
-  $("xsinfo").textContent = `${used.toLocaleString()} gates → ${best.size.toLocaleString()} voxels (${VOX_H_M} m × ${VOX_V_M} m, max value per voxel)`;
+  const idx = Int32Array.from(best.values());
+  addCloud(a, idx, idx.length, "volume", { sizeM: VOX_H_M * 1.7 });
+  $("xsinfo").textContent = `${used.toLocaleString()} gates → ${idx.length.toLocaleString()} voxels (${VOX_H_M} m × ${VOX_V_M} m, max value per voxel)`;
+}
+
+function drawPoints() {
+  const a = art!, sw = sweepSel(), ps = Number($<HTMLSelectElement>("psize").value);
+  const idx = new Int32Array(a.n);
+  let n = 0;
+  for (let i = 0; i < a.n; i++) {
+    if (section && !section.has(a.radialIdx[i])) continue;
+    if (sw !== "" && a.elevNo[i] !== Number(sw)) continue;
+    idx[n++] = i;
+  }
+  addCloud(a, idx, n, "points", { sizePx: ps });
+  $("xsinfo").textContent = section ? `${n.toLocaleString()} gates in ${section.size} radials` : "";
 }
 
 async function drawCones() {
@@ -206,29 +236,10 @@ function draw() {
   for (const p of coneLayers) viewer.scene.primitives.remove(p);
   coneLayers = []; coneToken++;
   if (cloud) { viewer.scene.primitives.remove(cloud); cloud = null; }
-  if ($<HTMLSelectElement>("render").value === "cones") {
-    if (points) { viewer.scene.primitives.remove(points); points = null; }
-    void drawCones(); banner(); drawCoverage(); return;
-  }
-  if ($<HTMLSelectElement>("render").value === "volume") {
-    if (points) { viewer.scene.primitives.remove(points); points = null; }
-    drawVolume(); banner(); drawCoverage(); return;
-  }
-  const a = art, k = vex(), al = alpha(), sw = sweepSel(), ps = Number($<HTMLSelectElement>("psize").value);
-  if (points) viewer.scene.primitives.remove(points);
-  points = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
-  let shown = 0;
-  for (let i = 0; i < a.n; i++) {
-    if (section && !section.has(a.radialIdx[i])) continue;
-    if (sw !== "" && a.elevNo[i] !== Number(sw)) continue;
-    points!.add({
-      position: Cesium.Cartesian3.fromDegrees(a.lon[i], a.lat[i], a.hEll[i] * k),
-      color: Cesium.Color.fromCssColorString(binHex(a.value[i])).withAlpha(al), pixelSize: ps, id: i,
-      scaleByDistance: new Cesium.NearFarScalar(20000, 2.5, 600000, 0.8),
-    });
-    shown++;
-  }
-  $("xsinfo").textContent = section ? `${shown.toLocaleString()} gates in ${section.size} radials` : "";
+  const mode = $<HTMLSelectElement>("render").value;
+  if (mode === "cones") void drawCones();
+  else if (mode === "volume") drawVolume();
+  else drawPoints();
   banner();
   drawCoverage();
 }
@@ -411,11 +422,30 @@ function plotSection() {
 
 // ---- inspection
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+// Tap-to-inspect: the loaded gate whose projected position is nearest the tap (within 28 px, nearest to the camera on ties).
+// Works in every render mode, in 3D only. Pure screen-space selection; the values shown come from the artifact.
+function nearestGate(pos: Cesium.Cartesian2): number {
+  if (!art || viewer.scene.mode !== Cesium.SceneMode.SCENE3D) return -1;
+  const ecef = ecefOf(art, vex()), cam = viewer.camera;
+  const m = Cesium.Matrix4.multiply(cam.frustum.projectionMatrix, cam.viewMatrix, new Cesium.Matrix4());
+  const w = viewer.scene.canvas.clientWidth, h = viewer.scene.canvas.clientHeight;
+  let best = -1, bd = 28 * 28, bw = Infinity;
+  for (let i = 0; i < art.n; i++) {
+    const x = ecef[i * 3], y = ecef[i * 3 + 1], z = ecef[i * 3 + 2];
+    const cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+    if (cw <= 0) continue;
+    const sx = ((m[0] * x + m[4] * y + m[8] * z + m[12]) / cw * 0.5 + 0.5) * w;
+    const sy = (1 - ((m[1] * x + m[5] * y + m[9] * z + m[13]) / cw * 0.5 + 0.5)) * h;
+    const d = (sx - pos.x) * (sx - pos.x) + (sy - pos.y) * (sy - pos.y);
+    if (d < bd || (d <= bd && cw < bw)) { bd = d; bw = cw; best = i; }
+  }
+  return best;
+}
+
 handler.setInputAction((ev: { position: Cesium.Cartesian2 }) => {
-  const p = viewer.scene.pick(ev.position);
   const box = $("inspect");
-  if (!art || !p || typeof p.id !== "number") { box.style.display = "none"; return; }
-  const i = p.id;
+  const i = nearestGate(ev.position);
+  if (!art || i < 0) { box.style.display = "none"; return; }
   const ri = art.radialIdx[i];
   const raz = radials ? radials.rows["azimuth_deg"][ri] : null;
   const rel = radials ? radials.rows["elevation_deg"][ri] : null;
