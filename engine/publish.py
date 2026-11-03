@@ -29,12 +29,14 @@ def thr_dir(t):
     return "thr%g" % t
 
 
-def export_all_products(wdir, stage, vol, skip_lowest_threshold=False):
+def export_all_products(wdir, stage, vol, skip_lowest_threshold=False, products=None):
     """<stage>/<PRODUCT>/thr<T>/ for every product present in the volume. REF comes from samples.parquet; the other
     moments are built in memory from the same decode (their full tables are not persisted; gates stay traceable by
     source SHA-256 + radial_index + gate_idx)."""
     done = []
     for prod, spec in PRODUCTS.items():
+        if products is not None and prod not in products:
+            continue
         df = None
         if prod != "REF":
             if not vol.moments[prod]["has"].any():
@@ -96,7 +98,7 @@ def write_index(web_data, station):
     os.replace(tmp, os.path.join(web_data, "index.json"))
 
 
-def publish_key(key, etag, bucket_url, raw_cache, work, out_root, skip_lowest_threshold=False):
+def publish_key(key, etag, bucket_url, raw_cache, work, out_root, skip_lowest_threshold=False, products=None):
     """Download one known archive object, run the engine, and write <out_root>/<STATION>/<stamp>/. Returns the dir.
     skip_lowest_threshold: omit each product's lowest display threshold (keeps case archives small)."""
     station = key.split("/")[-1][:4]
@@ -114,7 +116,7 @@ def publish_key(key, etag, bucket_url, raw_cache, work, out_root, skip_lowest_th
     shutil.rmtree(stage, ignore_errors=True)
     os.makedirs(stage)
     shutil.copy(os.path.join(wdir, "manifest.json"), stage)
-    prods = export_all_products(wdir, stage, load_volume(raw), skip_lowest_threshold=skip_lowest_threshold)
+    prods = export_all_products(wdir, stage, load_volume(raw), skip_lowest_threshold=skip_lowest_threshold, products=products)
     with open(os.path.join(stage, "products.json"), "w") as f:
         json.dump({"products": prods}, f)
     os.replace(stage, final)

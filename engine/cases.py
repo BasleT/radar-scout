@@ -13,6 +13,9 @@ import sys
 
 from .publish import BUCKET_DEFAULT, list_keys, publish_key, write_index
 
+CASE_PRODUCTS = ("REF", "VEL")  # keeps a case archive small (about 100 MB per volume); other products stay live-only
+MAX_VOLUMES = 4                # evenly spaced across the window
+
 CASES = [
     dict(id="el-reno-2013-05-31", title="El Reno tornado, 31 May 2013", station="KTLX", date="2013-05-31",
          window=("2250", "2320"), note="Event time approximate (touchdown near 23:03 UTC per public NWS summaries)."),
@@ -29,7 +32,10 @@ def case_keys(c, bucket_url):
         mm = re.search(r"_(\d{4})\d{2}_V\d\d(\.gz)?$", key)
         if mm and lo <= mm.group(1) <= hi and not key.endswith("_MDM"):
             out.append((key, etag))
-    return sorted(out)
+    out = sorted(out)
+    if len(out) > MAX_VOLUMES:  # evenly spaced pick, always including the first and last file
+        out = [out[round(i * (len(out) - 1) / (MAX_VOLUMES - 1))] for i in range(MAX_VOLUMES)]
+    return out
 
 
 def publish_cases(out_root, raw_cache, work, bucket_url=BUCKET_DEFAULT, only=None):
@@ -43,7 +49,7 @@ def publish_cases(out_root, raw_cache, work, bucket_url=BUCKET_DEFAULT, only=Non
             continue
         root = os.path.join(out_root, "cases", c["id"])
         for key, etag in keys:
-            publish_key(key, etag, bucket_url, raw_cache, work, root, skip_lowest_threshold=True)
+            publish_key(key, etag, bucket_url, raw_cache, work, root, skip_lowest_threshold=True, products=CASE_PRODUCTS)
         write_index(root, c["station"])
         listing.append({"id": c["id"], "title": c["title"], "station": c["station"], "date": c["date"],
                         "base": "cases/%s" % c["id"], "n_volumes": len(keys), "note": c["note"]})
