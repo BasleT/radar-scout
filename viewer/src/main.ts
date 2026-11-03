@@ -9,10 +9,21 @@ import { loadArtifact, loadCoverage, loadIndex, loadRadials, type Artifact, type
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const KEY = "radar.server";
-const BINS: [number, number, string][] = [
-  [20, 30, "#4aa3df"], [30, 35, "#2e9e4f"], [35, 40, "#9acd32"], [40, 45, "#f2d21b"],
-  [45, 50, "#f28c1b"], [50, 55, "#d62828"], [55, Infinity, "#c026d3"],
-];
+type Bin = [number, number, string];
+// Display colour tables (cosmetic; thresholds above are the engine's published reductions). VEL is coloured by sign
+// only: the sign convention is not verified here, so the legend does not say "toward"/"away".
+const SCALES: Record<string, Bin[]> = {
+  REF: [[20, 30, "#4aa3df"], [30, 35, "#2e9e4f"], [35, 40, "#9acd32"], [40, 45, "#f2d21b"], [45, 50, "#f28c1b"], [50, 55, "#d62828"], [55, Infinity, "#c026d3"]],
+  VEL: [[-Infinity, -30, "#08306b"], [-30, -20, "#2171b5"], [-20, -10, "#6baed6"], [-10, 0, "#c6dbef"], [0, 10, "#fcc5c0"], [10, 20, "#fb6a4a"], [20, 30, "#cb181d"], [30, Infinity, "#67000d"]],
+  SW: [[0, 4, "#4aa3df"], [4, 6, "#9acd32"], [6, 8, "#f2d21b"], [8, Infinity, "#d62828"]],
+  ZDR: [[-Infinity, 0.5, "#4aa3df"], [0.5, 1, "#2e9e4f"], [1, 2, "#f2d21b"], [2, 3, "#f28c1b"], [3, Infinity, "#d62828"]],
+  PHI: [[0, 90, "#4aa3df"], [90, 180, "#2e9e4f"], [180, 270, "#f2d21b"], [270, Infinity, "#d62828"]],
+  RHO: [[0, 0.7, "#d62828"], [0.7, 0.8, "#f28c1b"], [0.8, 0.9, "#f2d21b"], [0.9, Infinity, "#2e9e4f"]],
+};
+const DEFAULT_PRODUCTS = [{ id: "REF", label: "Reflectivity", unit: "dBZ", thresholds: [20, 30, 40, 50] }];
+let product = "REF";
+let productInfo: { id: string; label: string; unit: string; thresholds: number[] } = DEFAULT_PRODUCTS[0];
+const fmtT = (t: number) => String(t);
 
 function safeGet(k: string): string | null { try { return localStorage.getItem(k); } catch { return null; } }
 function safeSet(k: string, v: string) { try { localStorage.setItem(k, v); } catch { /* storage unavailable */ } }
@@ -38,10 +49,15 @@ let section: Set<number> | null = null;
 let volDir = "";
 let timer: number | undefined;
 
-$("legend").innerHTML = "<b>dBZ</b>" +
-  BINS.map(([a, b, c]) => `<div><span class="sw" style="background:${c}"></span>${a}${b === Infinity ? "+" : "–" + b}</div>`).join("");
+function renderLegend() {
+  const sc = SCALES[product] ?? [];
+  $("legend").innerHTML = `<b>${productInfo.unit}</b>` + sc.map(([a, b, c]) => {
+    const t = a === -Infinity ? `< ${b}` : b === Infinity ? `≥ ${a}` : `${a} – ${b}`;
+    return `<div><span class="sw" style="background:${c}"></span>${t}</div>`;
+  }).join("");
+}
 
-const binHex = (dbz: number): string => { for (const [a, b, c] of BINS) if (dbz >= a && dbz < b) return c; return "#ffffff"; };
+const binHex = (v: number): string => { for (const [a, b, c] of SCALES[product] ?? []) if (v >= a && v < b) return c; return "#ffffff"; };
 const vex = () => Number($<HTMLSelectElement>("vex").value);
 const alpha = () => Number($<HTMLInputElement>("alpha").value);
 const base = () => $<HTMLInputElement>("server").value.trim().replace(/\/+$/, "");
@@ -51,7 +67,7 @@ const sweepSel = () => $<HTMLSelectElement>("sweep").value;
 function banner() {
   const k = vex();
   $("banner").innerHTML = (k !== 1 ? `<b>VERTICAL EXAGGERATION ${k}×: displayed heights are ${k}× ellipsoid height, NOT to scale.</b><br>` : "") +
-    "Measured gates only, drawn as points at beam-centre height (4/3 Earth model); sample volumes are not drawn (beam width not decoded). Not interpolated. Gates below the threshold, range-folded gates and unscanned regions are not drawn; their absence is not evidence of no echo. Not an operational or safety product.";
+    "Measured gates only (selected product), drawn as points at beam-centre height (4/3 Earth model); sample volumes are not drawn (beam width not decoded). Not interpolated. Gates below the threshold, range-folded gates and unscanned regions are not drawn; their absence is not evidence of no echo. Not an operational or safety product.";
 }
 
 // ---- KPI cards: summaries (max / count) of the gates in the loaded artifact, not new measurements
@@ -59,7 +75,7 @@ function kpis(a: Artifact) {
   let maxDbz = -Infinity, maxH = -Infinity, maxArc = 0;
   const cuts = new Set<number>();
   for (let i = 0; i < a.n; i++) {
-    if (a.dbz[i] > maxDbz) maxDbz = a.dbz[i];
+    if (a.value[i] > maxDbz) maxDbz = a.value[i];
     if (a.hMsl[i] > maxH) maxH = a.hMsl[i];
     if (a.arc[i] > maxArc) maxArc = a.arc[i];
     cuts.add(a.elevNo[i]);
@@ -67,8 +83,8 @@ function kpis(a: Artifact) {
   const card = (v: string, l: string) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
   const none = a.n === 0;
   $("kpis").innerHTML =
-    card(none ? "–" : `${maxDbz.toFixed(1)}`, "max dBZ (loaded gates)") +
-    card(a.n.toLocaleString(), `gates ≥ ${a.meta.reduction.threshold_dbz} dBZ`) +
+    card(none ? "–" : `${maxDbz.toFixed(product === "RHO" ? 3 : 1)}`, `max ${a.meta.unit} (loaded gates)`) +
+    card(a.n.toLocaleString(), `gates ${product === "VEL" ? "|v| ≥" : product === "RHO" ? "≤" : "≥"} ${a.meta.reduction.threshold} ${a.meta.unit}`) +
     card(none ? "–" : `${(maxH / 1000).toFixed(1)} km`, "highest gate, MSL") +
     card(none ? "–" : `${(maxArc / 1000).toFixed(0)} km`, "farthest gate (arc)") +
     card(String(cuts.size), "cuts with gates") +
@@ -80,12 +96,12 @@ function kpis(a: Artifact) {
 
 function describe(a: Artifact) {
   const m = a.meta, r = m.reduction;
-  $("title").textContent = `${m.station}  ·  reflectivity`;
+  $("title").textContent = `${m.station}  ·  ${m.product_label.toLowerCase()}`;
   $("sub").textContent = `${m.volume_time_utc.first_radial.replace("+00:00", "Z")} → ${m.volume_time_utc.last_radial.replace("+00:00", "Z")}`;
   $("meta").innerHTML = `<table>
     <tr><td>Volume (UTC)</td><td>${m.volume_time_utc.first_radial}<br>to ${m.volume_time_utc.last_radial}<br><i>sweeps are not simultaneous</i></td></tr>
     <tr><td>Source file</td><td>${m.source_sha256.slice(0, 16)}… (SHA-256)</td></tr>
-    <tr><td>Gates in data</td><td>${a.n.toLocaleString()} of ${r.n_samples_in.toLocaleString()} (MEASURED, ≥ ${r.threshold_dbz} dBZ)</td></tr>
+    <tr><td>Gates in data</td><td>${a.n.toLocaleString()} of ${r.n_samples_in.toLocaleString()} (MEASURED, ${m.product === "VEL" ? "|v| ≥" : m.product === "RHO" ? "≤" : "≥"} ${r.threshold} ${r.unit})</td></tr>
     <tr><td>Height</td><td>beam centre, ellipsoid (${m.geoid.model}, ${m.geoid.status})</td></tr>
     <tr><td>Integrity</td><td>${a.hashStatus}</td></tr>
     <tr><td>Interpolation</td><td>${m.interpolation}</td></tr></table>`;
@@ -107,7 +123,7 @@ function draw() {
     if (sw !== "" && a.elevNo[i] !== Number(sw)) continue;
     points!.add({
       position: Cesium.Cartesian3.fromDegrees(a.lon[i], a.lat[i], a.hEll[i] * k),
-      color: Cesium.Color.fromCssColorString(binHex(a.dbz[i])).withAlpha(al), pixelSize: 3, id: i,
+      color: Cesium.Color.fromCssColorString(binHex(a.value[i])).withAlpha(al), pixelSize: 3, id: i,
     });
     shown++;
   }
@@ -135,13 +151,34 @@ function coverageInfo() {
   $("covinfo").textContent = `${Object.keys(coverage.cuts).length} cuts with reflectivity; ${noRef} of ${radials.rows["has_ref"].length} radials carry no REF moment (e.g. Doppler-only cuts). ${coverage.note}.`;
 }
 
+// ---- products: the list comes from the server's index.json (what the engine actually published)
+function setProducts(list: { id: string; label: string; unit: string; thresholds: number[] }[]) {
+  const sel = $<HTMLSelectElement>("product");
+  const items = list.length ? list : DEFAULT_PRODUCTS;
+  if (!items.some((p) => p.id === product)) product = items[0].id;
+  sel.innerHTML = items.map((p) => `<option value="${p.id}">${p.label} (${p.id}), ${p.unit}</option>`).join("");
+  sel.value = product;
+  applyProduct(items);
+}
+
+function applyProduct(items: { id: string; label: string; unit: string; thresholds: number[] }[]) {
+  productInfo = items.find((p) => p.id === product) ?? items[0];
+  const t = $<HTMLSelectElement>("thr"), keep = t.value;
+  t.innerHTML = productInfo.thresholds.map((x) => `<option value="${fmtT(x)}">${product === "RHO" ? "≤ " : product === "VEL" ? "|v| ≥ " : "≥ "}${x} ${productInfo.unit}</option>`).join("");
+  t.value = productInfo.thresholds.map(fmtT).includes(keep) ? keep : fmtT(productInfo.thresholds[Math.min(1, productInfo.thresholds.length - 1)]);
+  renderLegend();
+}
+
+const currentProducts = () => (index && index.volumes.length ? index.volumes[Number($<HTMLInputElement>("tsl").value)]?.products ?? [] : []);
+
 async function loadVolume(dir: string) {
   $("err").textContent = "";
   volDir = dir;
   try {
-    art = await loadArtifact(`${dir}/thr${thr()}`);
-    radials = await loadRadials(`${dir}/thr${thr()}`).catch(() => null);
-    coverage = await loadCoverage(`${dir}/thr${thr()}`).catch(() => null);
+    const d = `${dir}/${product}/thr${thr()}`;
+    art = await loadArtifact(d);
+    radials = await loadRadials(d).catch(() => null);
+    coverage = await loadCoverage(d).catch(() => null);
     describe(art);
     coverageInfo();
     draw();
@@ -171,10 +208,12 @@ async function loadLatest() {
   if (index && index.volumes.length > 0) {
     slider.max = String(index.volumes.length - 1); slider.disabled = false; $<HTMLButtonElement>("play").disabled = false;
     slider.value = slider.max;
+    setProducts(index.volumes[index.volumes.length - 1].products);
     ok = await loadVolume(`${base()}/${index.volumes[index.volumes.length - 1].path}`);
     tlabel();
   } else {
     slider.disabled = true; $<HTMLButtonElement>("play").disabled = true;
+    setProducts([]);
     ok = await loadVolume(`${base()}/latest`);
   }
   if (ok) home();
@@ -240,7 +279,7 @@ function plotSection() {
   }
   g.fillText("ground arc, km  (y: km MSL)", L + 4, c.height - 0);
   for (const i of sel) {
-    g.fillStyle = binHex(art.dbz[i]);
+    g.fillStyle = binHex(art.value[i]);
     g.fillRect(L + (art.arc[i] / xmax) * W - 1, 6 + H - ((art.hMsl[i] - ymin) / (ymax - ymin || 1)) * H - 1, 2, 2);
   }
   $("xsinfo").textContent = `${sel.length.toLocaleString()} gates; gaps between points are unsampled, not empty.`;
@@ -260,7 +299,7 @@ handler.setInputAction((ev: { position: Cesium.Cartesian2 }) => {
   box.style.display = "block";
   box.innerHTML = `<table>
     <tr><td>Class</td><td>MEASURED (not interpolated)</td></tr>
-    <tr><td>Reflectivity</td><td>${art.dbz[i].toFixed(1)} dBZ (raw N = ${art.rawN[i]})</td></tr>
+    <tr><td>${art.meta.product_label}</td><td>${art.value[i].toFixed(product === "RHO" ? 3 : 1)} ${art.meta.unit} (raw N = ${art.rawN[i]})</td></tr>
     <tr><td>Position</td><td>${art.lat[i].toFixed(5)}°, ${art.lon[i].toFixed(5)}°</td></tr>
     <tr><td>Beam-centre height</td><td>${art.hMsl[i].toFixed(0)} m MSL · ${art.hEll[i].toFixed(0)} m ellipsoid</td></tr>
     <tr><td>Range</td><td>slant ${(art.slant[i] / 1000).toFixed(2)} km · ground arc ${(art.arc[i] / 1000).toFixed(2)} km</td></tr>
@@ -291,6 +330,13 @@ $("home").addEventListener("click", home);
 $<HTMLInputElement>("server").value = safeGet(KEY) ?? (import.meta.env.VITE_DEFAULT_SERVER as string | undefined) ?? "/data";
 $("load").addEventListener("click", () => { setPlaying(false); void loadLatest(); });
 $("thr").addEventListener("change", () => { if (volDir) void loadVolume(volDir); });
+$("product").addEventListener("change", () => {
+  product = $<HTMLSelectElement>("product").value;
+  $<HTMLSelectElement>("thr").innerHTML = ""; // thresholds are per product and unit: never carry one over
+  const list = currentProducts();
+  applyProduct(list.length ? list : DEFAULT_PRODUCTS);
+  if (volDir) void loadVolume(volDir);
+});
 $("alpha").addEventListener("input", draw);
 $("vex").addEventListener("change", draw);
 $("sweep").addEventListener("change", draw);
@@ -299,4 +345,5 @@ $("xgo").addEventListener("click", applySection);
 $("xclear").addEventListener("click", () => { section = null; $("xs").style.display = "none"; draw(); });
 $("tsl").addEventListener("input", () => { setPlaying(false); void goto(Number($<HTMLInputElement>("tsl").value)); });
 $("play").addEventListener("click", () => setPlaying(timer === undefined));
+setProducts([]);
 banner();

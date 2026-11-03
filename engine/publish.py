@@ -6,6 +6,7 @@ recorded in manifest.json. If anything fails the previous `latest` is left untou
 The S3 bucket and object naming are configurable because they have changed before (see ARCHITECTURE.md sources).
 """
 import datetime
+import json
 import os
 import re
 import shutil
@@ -14,10 +15,34 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
+from .decode import load_volume
 from .export import export_volume
+from .products import PRODUCTS
+from .samples import build_moment_samples
 from .viewer_export import export_viewer
 
-THRESHOLDS = (20, 30, 40, 50)
+
+def thr_dir(t):
+    return "thr%g" % t
+
+
+def export_all_products(wdir, stage, vol):
+    """<stage>/<PRODUCT>/thr<T>/ for every product present in the volume. REF comes from samples.parquet; the other
+    moments are built in memory from the same decode (their full tables are not persisted; gates stay traceable by
+    source SHA-256 + radial_index + gate_idx)."""
+    done = []
+    for prod, spec in PRODUCTS.items():
+        df = None
+        if prod != "REF":
+            if not vol.moments[prod]["has"].any():
+                continue
+            df, status = build_moment_samples(vol, prod, include=("MEASURED",))
+            if status != "ok" or df.empty:
+                raise RuntimeError("%s: no usable samples (geoid status %r)" % (prod, status))
+        for t in spec["thresholds"]:
+            export_viewer(wdir, t, out_dir=os.path.join(stage, prod, thr_dir(t)), product=prod, df=df)
+        done.append({"id": prod, "label": spec["label"], "unit": spec["unit"], "thresholds": list(spec["thresholds"])})
+    return done
 
 
 def list_keys(bucket_url, prefix):
@@ -51,13 +76,14 @@ def download(bucket_url, key, dst):
 
 def write_index(web_data, station):
     """index.json: retained volumes, oldest first, for time playback. Times are copied from each manifest."""
-    import json
     vols = []
     for s in sorted(os.listdir(os.path.join(web_data, station))):
         mp = os.path.join(web_data, station, s, "manifest.json")
         if os.path.exists(mp):
             m = json.load(open(mp))
-            vols.append({"path": "%s/%s" % (station, s), "station": m["station"], "vcp": m["vcp"],
+            pj = os.path.join(web_data, station, s, "products.json")
+            prods = json.load(open(pj))["products"] if os.path.exists(pj) else []
+            vols.append({"path": "%s/%s" % (station, s), "station": m["station"], "vcp": m["vcp"], "products": prods,
                          "first_radial": m["volume_time_utc"]["first_radial"],
                          "last_radial": m["volume_time_utc"]["last_radial"]})
     tmp = os.path.join(web_data, "index.json.tmp")
@@ -83,8 +109,9 @@ def publish(station, bucket_url, raw_cache, work, web_data, keep=6):
     shutil.rmtree(stage, ignore_errors=True)
     os.makedirs(stage)
     shutil.copy(os.path.join(wdir, "manifest.json"), stage)
-    for t in THRESHOLDS:
-        export_viewer(wdir, float(t), out_dir=os.path.join(stage, "thr%d" % t))
+    prods = export_all_products(wdir, stage, load_volume(raw))
+    with open(os.path.join(stage, "products.json"), "w") as f:
+        json.dump({"products": prods}, f)
     os.replace(stage, final)
     link = os.path.join(web_data, "latest")
     tmp_link = link + ".new"

@@ -84,6 +84,53 @@ def build_samples(vol, include=("MEASURED", "RANGE_FOLDED"), compute_geoid=True)
     return df, status
 
 
+def build_moment_samples(vol, product, include=("MEASURED",), compute_geoid=True):
+    """Same as build_samples for VEL/SW/ZDR/PHI/RHO. Uses the moment's own gate geometry, scale and offset.
+    Column `value` (unit in `unit`) replaces `dbz`. Returns (DataFrame, geoid_status)."""
+    from .products import PRODUCTS
+    m = vol.moments[product]
+    parts = []
+    for i in np.nonzero(m["has"])[0]:
+        raw = m["raw"][i]
+        cls = classify(raw)
+        k = np.nonzero(np.isin(cls, include))[0]
+        if k.size:
+            parts.append(pd.DataFrame({"radial_index": np.int32(i), "gate_idx": k.astype(np.int32),
+                                       "raw_N": raw[k].astype(np.uint16), "data_class": cls[k]}))
+    if not parts:
+        return pd.DataFrame(), "no samples"
+    df = pd.concat(parts, ignore_index=True)
+    ri = df["radial_index"].to_numpy()
+    df["product"] = product
+    df["unit"] = PRODUCTS[product]["unit"]
+    df["source_sha256"] = vol.source_sha256
+    df["elevation_number"] = vol.elevation_number[ri]
+    df["radial_number"] = vol.radial_number[ri]
+    df["scale"] = m["scale"][ri]
+    df["offset"] = m["offset"][ri]
+    df["value"] = dbz_from_raw(df["raw_N"].to_numpy(), df["scale"].to_numpy(), df["offset"].to_numpy())
+    df["azimuth_deg"] = vol.azimuth_deg[ri]
+    df["elevation_deg"] = vol.elevation_deg[ri]
+    df["radial_time_ms_utc"] = vol.radial_time_ms_since_epoch()[ri]
+    rng = m["first_gate_m"][ri] + df["gate_idx"].to_numpy() * m["gate_spacing_m"][ri]
+    df["slant_range_m"] = rng
+    g = geometry.place_gates(vol.radar_lat, vol.radar_lon, vol.antenna_msl_m, rng,
+                             df["elevation_deg"].to_numpy(), df["azimuth_deg"].to_numpy())
+    for k_, v_ in g.items():
+        df[k_] = v_
+    df["beamwidth_deg"] = np.nan
+    if compute_geoid:
+        N, status = geoid.undulation(df["lat_deg"].to_numpy(), df["lon_deg"].to_numpy())
+        df["geoid_undulation_m"] = N
+        df["height_ellipsoid_m"] = df["height_msl_m"].to_numpy() + N
+    else:
+        status = "not computed"
+        df["geoid_undulation_m"] = np.nan
+        df["height_ellipsoid_m"] = np.nan
+    df["chain_id"] = CHAIN_ID
+    return df, status
+
+
 def radials_table(vol):
     return pd.DataFrame({
         "radial_index": np.arange(len(vol.azimuth_deg), dtype=np.int32),

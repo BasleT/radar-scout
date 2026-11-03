@@ -1,25 +1,26 @@
 // Schema-checked loader for engine/viewer_export.py output. Mirrors COLUMNS there. No scientific computation.
 export interface ViewerMeta {
-  schema_version: string; kind: string; source_sha256: string; station: string; vcp: number; interpolation: string; n_gates: number;
+  schema_version: string; kind: string; product: string; product_label: string; unit: string; source_sha256: string; station: string; vcp: number; interpolation: string; n_gates: number;
   radar: { lat: number; lon: number };
   volume_time_utc: { first_radial: string; last_radial: string };
   geoid: { model: string; status: string };
-  reduction: { threshold_dbz: number; n_samples_in: number };
+  reduction: { threshold: number; unit: string; n_samples_in: number };
   gates_bin: { file: string; sha256: string; size_bytes: number; byte_order: string; layout: string; columns: { name: string; dtype: string }[] };
 }
 
 export interface Artifact {
   meta: ViewerMeta; n: number; hashStatus: string;
   lon: Float64Array; lat: Float64Array; hEll: Float64Array; hMsl: Float64Array; arc: Float64Array; slant: Float64Array;
-  dbz: Float32Array; rawN: Uint16Array; radialIdx: Int32Array; gateIdx: Int32Array; elevNo: Int16Array;
+  value: Float32Array; rawN: Uint16Array; radialIdx: Int32Array; gateIdx: Int32Array; elevNo: Int16Array;
 }
 
 export interface Radials { columns: string[]; rows: Record<string, number[]>; }
 export interface Coverage { kind: string; note: string; columns: string[]; cuts: Record<string, number[][]>; }
-export interface VolumeIndex { volumes: { path: string; station: string; vcp: number; first_radial: string; last_radial: string }[]; }
+export interface ProductInfo { id: string; label: string; unit: string; thresholds: number[]; }
+export interface VolumeIndex { volumes: { path: string; station: string; vcp: number; first_radial: string; last_radial: string; products: ProductInfo[] }[]; }
 
 const EXPECT = [["lon_deg", "<f8"], ["lat_deg", "<f8"], ["height_ellipsoid_m", "<f8"], ["height_msl_m", "<f8"],
-  ["ground_arc_m", "<f8"], ["slant_range_m", "<f8"], ["dbz", "<f4"], ["raw_N", "<u2"], ["radial_index", "<i4"],
+  ["ground_arc_m", "<f8"], ["slant_range_m", "<f8"], ["value", "<f4"], ["raw_N", "<u2"], ["radial_index", "<i4"],
   ["gate_idx", "<i4"], ["elevation_number", "<i2"]];
 const SIZE: Record<string, number> = { "<f8": 8, "<f4": 4, "<u2": 2, "<i4": 4, "<i2": 2 };
 
@@ -41,7 +42,7 @@ export const loadIndex = (base: string) => getJson<VolumeIndex>(`${base}/index.j
 
 export async function loadArtifact(dirUrl: string): Promise<Artifact> {
   const meta = await getJson<ViewerMeta>(`${dirUrl}/viewer.json`);
-  if (meta.kind !== "viewer-reduction" || meta.schema_version !== "1.0") throw new Error("unsupported artifact schema");
+  if (meta.kind !== "viewer-reduction" || meta.schema_version !== "1.1") throw new Error("unsupported artifact schema");
   if (meta.interpolation !== "none") throw new Error("artifact claims interpolation; this viewer only draws measured gates");
   const g = meta.gates_bin;
   if (g.byte_order !== "little" || g.layout !== "column-major") throw new Error("unsupported gates.bin layout");
@@ -65,7 +66,7 @@ export async function loadArtifact(dirUrl: string): Promise<Artifact> {
   return {
     meta, n, hashStatus,
     lon: take(Float64Array, 8), lat: take(Float64Array, 8), hEll: take(Float64Array, 8), hMsl: take(Float64Array, 8),
-    arc: take(Float64Array, 8), slant: take(Float64Array, 8), dbz: take(Float32Array, 4), rawN: take(Uint16Array, 2),
+    arc: take(Float64Array, 8), slant: take(Float64Array, 8), value: take(Float32Array, 4), rawN: take(Uint16Array, 2),
     radialIdx: take(Int32Array, 4), gateIdx: take(Int32Array, 4), elevNo: take(Int16Array, 2),
   };
 }

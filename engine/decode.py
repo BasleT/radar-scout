@@ -15,6 +15,9 @@ from dataclasses import dataclass, field
 import numpy as np
 
 
+MOMENTS = ("VEL", "SW", "ZDR", "PHI", "RHO")
+
+
 def sha256_file(path):
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -50,6 +53,9 @@ class Volume:
     scale: np.ndarray
     offset: np.ndarray
     ref_raw: list = field(default_factory=list)   # list[np.ndarray uint8] (None where no REF)
+    # other moments by name (VEL, SW, ZDR, PHI, RHO): per-radial arrays, each moment with its OWN gate geometry,
+    # scale and offset (they differ from REF's, e.g. VEL ngates 1192 vs REF 1832 in split cuts).
+    moments: dict = field(default_factory=dict)
     decoder: dict = field(default_factory=dict)
 
     @property
@@ -89,6 +95,9 @@ def load_volume(path):
             has_ref=np.zeros(n, bool), ngates=np.zeros(n, np.int32), first_gate_m=np.zeros(n),
             gate_spacing_m=np.zeros(n), scale=np.zeros(n), offset=np.zeros(n))
         ref_raw = []
+        mom = {k: dict(has=np.zeros(n, bool), ngates=np.zeros(n, np.int32), first_gate_m=np.zeros(n),
+                       gate_spacing_m=np.zeros(n), scale=np.zeros(n), offset=np.zeros(n), raw=[None] * n)
+               for k in MOMENTS}
         for i, r in enumerate(recs):
             h = r["msg_header"]
             out["elevation_number"][i] = h["elevation_number"]
@@ -111,13 +120,23 @@ def load_volume(path):
                 ref_raw.append(np.asarray(m["data"]).astype(np.uint16))
             else:
                 ref_raw.append(None)
+            for k, d in mom.items():
+                if k in r:
+                    m = r[k]
+                    d["has"][i] = True
+                    d["ngates"][i] = m["ngates"]
+                    d["first_gate_m"][i] = m["first_gate"]
+                    d["gate_spacing_m"][i] = m["gate_spacing"]
+                    d["scale"][i] = m["scale"]
+                    d["offset"][i] = m["offset"]
+                    d["raw"][i] = np.asarray(m["data"]).astype(np.uint16)
         vcp = v.get("vcp")
         return Volume(
             source_path=path, source_name=os.path.basename(path), source_sha256=sha,
             source_size_bytes=os.path.getsize(path), station=recs[0]["msg_header"]["id"].decode(),
             radar_lat=float(v["lat"]), radar_lon=float(v["lon"]), site_height_m_msl=float(v["height"]),
             tower_height_m_agl=float(v["feedhorn_height"]), vcp=int(vcp) if vcp is not None else -1,
-            ref_raw=ref_raw,
+            ref_raw=ref_raw, moments=mom,
             decoder={"name": "pyart.io.nexrad_level2.NEXRADLevel2File", "pyart_version": pyart.__version__},
             **out)
     finally:

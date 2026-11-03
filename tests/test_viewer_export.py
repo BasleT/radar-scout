@@ -38,7 +38,8 @@ def test_gates_are_exact_subset(reduced):
     for c in ("lon_deg", "lat_deg", "height_ellipsoid_m", "height_msl_m", "ground_arc_m", "slant_range_m", "raw_N",
               "radial_index", "gate_idx"):
         assert np.array_equal(cols[c], exp[c].to_numpy().astype(dict(COLUMNS)[c])), c
-    assert np.array_equal(cols["dbz"], exp["dbz"].to_numpy().astype("<f4"))
+    assert np.array_equal(cols["value"], exp["dbz"].to_numpy().astype("<f4"))
+    assert meta["product"] == "REF" and meta["unit"] == "dBZ"
 
 
 def test_accounting_adds_up(reduced):
@@ -57,4 +58,34 @@ def test_refuses_missing_ellipsoid_height(tmp_path):
         "source": {"sha256": "x"}, "station": "T", "vcp": 0, "radar": {}, "volume_time_utc": {},
         "geoid": {"status": "failed"}, "model": {}}))
     with pytest.raises(ValueError):
-        export_viewer(str(tmp_path))
+        export_viewer(str(tmp_path), 30.0)
+
+
+def test_velocity_rule_keeps_either_sign(tmp_path):
+    vals = [-20.0, -3.0, 3.0, 12.0, -10.0]
+    n = len(vals)
+    df = pd.DataFrame({"data_class": ["MEASURED"] * n, "value": vals, "height_ellipsoid_m": [1.0] * n,
+                       "lon_deg": [0.0] * n, "lat_deg": [0.0] * n, "height_msl_m": [1.0] * n,
+                       "ground_arc_m": [1.0] * n, "slant_range_m": [1.0] * n, "raw_N": [100] * n,
+                       "radial_index": list(range(n)), "gate_idx": [0] * n, "elevation_number": [1] * n})
+    (tmp_path / "manifest.json").write_text(json.dumps({
+        "source": {"sha256": "x"}, "station": "T", "vcp": 0, "radar": {}, "volume_time_utc": {},
+        "geoid": {"status": "synthetic"}, "model": {}}))
+    meta = export_viewer(str(tmp_path), 10.0, product="VEL", df=df)
+    assert meta["n_gates"] == 3                      # -20, 12 and -10 (|v| >= 10, boundary inclusive)
+    assert meta["unit"] == "m/s" and "abs(value)" in meta["reduction"]["keep"]
+
+
+def test_correlation_coefficient_rule_keeps_low_values(tmp_path):
+    vals = [0.3, 0.7, 0.71, 0.99]
+    n = len(vals)
+    df = pd.DataFrame({"data_class": ["MEASURED"] * n, "value": vals, "height_ellipsoid_m": [1.0] * n,
+                       "lon_deg": [0.0] * n, "lat_deg": [0.0] * n, "height_msl_m": [1.0] * n,
+                       "ground_arc_m": [1.0] * n, "slant_range_m": [1.0] * n, "raw_N": [100] * n,
+                       "radial_index": list(range(n)), "gate_idx": [0] * n, "elevation_number": [1] * n})
+    (tmp_path / "manifest.json").write_text(json.dumps({
+        "source": {"sha256": "x"}, "station": "T", "vcp": 0, "radar": {}, "volume_time_utc": {},
+        "geoid": {"status": "synthetic"}, "model": {}}))
+    meta = export_viewer(str(tmp_path), 0.7, product="RHO", df=df)
+    assert meta["n_gates"] == 2                      # 0.3 and 0.7 (value <= 0.7, boundary inclusive)
+    assert "value <= threshold" in meta["reduction"]["keep"]
