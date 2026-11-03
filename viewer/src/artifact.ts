@@ -74,3 +74,42 @@ export async function loadArtifact(dirUrl: string): Promise<Artifact> {
     radialIdx: take(Int32Array, 4), gateIdx: take(Int32Array, 4), elevNo: take(Int16Array, 2),
   };
 }
+
+// ---- Per-sweep artifacts (engine/sweeps.py): a one-byte polar texture of raw N plus a positional mesh. No computation.
+export interface SweepIndex {
+  product: string; unit: string;
+  cuts: { elevation_number: number; path: string; elevation_deg_mean: number; n_radials: number; n_gates: number }[];
+  skipped: { elevation_number: number; reason: string }[];
+}
+export interface SweepMeta {
+  kind: string; schema_version: string; interpolation: string; product: string; unit: string; elevation_number: number;
+  elevation_deg_mean: number; n_radials: number; n_gates: number; value_of_n: (number | null)[];
+  texture: { file: string; dtype: string; sha256: string; size_bytes: number; width: number; height: number };
+  mesh: { file: string; dtype: string; sha256: string; size_bytes: number; n_knots: number; knot_gate_boundary: number[];
+          origin_lon_deg: number; origin_lat_deg: number; mesh_chord_error_m: { height_max: number; ground_arc_max: number } };
+}
+export interface Sweep { meta: SweepMeta; tex: Uint8Array; dlon: Float32Array; dlat: Float32Array; h: Float32Array; hashStatus: string; }
+
+export const loadSweepIndex = (volDir: string, product: string) => getJson<SweepIndex>(`${volDir}/sweeps/${product}/index.json`);
+
+export async function loadSweep(volDir: string, path: string): Promise<Sweep> {
+  const dir = `${volDir}/${path}`;
+  const meta = await getJson<SweepMeta>(`${dir}/sweep.json`);
+  if (meta.kind !== "sweep-texture" || meta.schema_version !== "1.0") throw new Error("unsupported sweep schema");
+  if (meta.interpolation !== "none") throw new Error("sweep claims interpolation; this viewer only draws decoded values");
+  if (meta.texture.dtype !== "u8" || meta.mesh.dtype !== "<f4") throw new Error("unsupported sweep dtypes");
+  const nv = meta.n_radials * 2 * meta.mesh.n_knots;
+  if (meta.texture.size_bytes !== meta.n_radials * meta.n_gates || meta.mesh.size_bytes !== nv * 12) throw new Error("sweep sizes inconsistent");
+  const [tb, mb] = await Promise.all([meta.texture.file, meta.mesh.file].map(async (f) => {
+    const r = await fetch(`${dir}/${f}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`${f}: HTTP ${r.status}`);
+    return r.arrayBuffer();
+  }));
+  if (tb.byteLength !== meta.texture.size_bytes || mb.byteLength !== meta.mesh.size_bytes) throw new Error("sweep file size differs from manifest");
+  const [ht, hm] = await Promise.all([sha256Hex(tb), sha256Hex(mb)]);
+  if ((ht !== null && ht !== meta.texture.sha256) || (hm !== null && hm !== meta.mesh.sha256)) throw new Error("sweep SHA-256 does not match manifest");
+  return {
+    meta, hashStatus: ht === null ? "NOT verified (insecure context)" : "verified", tex: new Uint8Array(tb),
+    dlon: new Float32Array(mb, 0, nv), dlat: new Float32Array(mb, nv * 4, nv), h: new Float32Array(mb, nv * 8, nv),
+  };
+}

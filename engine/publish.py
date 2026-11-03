@@ -19,6 +19,7 @@ from .decode import load_volume
 from .export import export_volume
 from .products import PRODUCTS
 from .samples import build_moment_samples
+from .sweeps import write_all_sweeps
 from .viewer_export import export_viewer
 
 
@@ -48,6 +49,7 @@ def export_all_products(wdir, stage, vol, skip_lowest_threshold=False, products=
         for t in ths:
             export_viewer(wdir, t, out_dir=os.path.join(stage, prod, thr_dir(t)), product=prod, df=df)
         done.append({"id": prod, "label": spec["label"], "unit": spec["unit"], "thresholds": list(ths)})
+    write_all_sweeps(vol, stage, products=products)  # per-cut polar textures + meshes for filled rendering
     return done
 
 

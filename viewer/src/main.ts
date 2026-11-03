@@ -4,8 +4,9 @@
 // selecting radials by azimuth for a cross-section, and max/count summaries for the KPI cards), each labelled.
 (window as unknown as { CESIUM_BASE_URL: string }).CESIUM_BASE_URL = "./cesium/";
 
+import { buildCone, buildLut } from "./cones";
 import * as Cesium from "cesium";
-import { loadArtifact, loadCoverage, loadIndex, loadRadials, type Artifact, type Coverage, type Radials, type VolumeIndex } from "./artifact";
+import { loadArtifact, loadCoverage, loadIndex, loadRadials, loadSweep, loadSweepIndex, type Sweep, type Artifact, type Coverage, type Radials, type VolumeIndex } from "./artifact";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const KEY = "radar.server";
@@ -53,6 +54,10 @@ viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
 
 let points: Cesium.PointPrimitiveCollection | null = null;
 let cloud: Cesium.BillboardCollection | null = null;
+let coneLayers: Cesium.Primitive[] = [];
+const sweepCache = new Map<string, Sweep[]>();
+let coneToken = 0;
+const RULE: Record<string, "ge" | "absge" | "le"> = { VEL: "absge", RHO: "le" }; // display filter per product (mirrors engine/products.py)
 let covLines: Cesium.PolylineCollection | null = null;
 let art: Artifact | null = null;
 let radials: Radials | null = null;
@@ -80,7 +85,9 @@ const sweepSel = () => $<HTMLSelectElement>("sweep").value;
 function banner() {
   const k = vex();
   $("banner").innerHTML = (k !== 1 ? `<b>VERTICAL EXAGGERATION ${k}×: displayed heights are ${k}× ellipsoid height, NOT to scale.</b><br>` : "") +
-    ($<HTMLSelectElement>("render").value === "volume"
+    ($<HTMLSelectElement>("render").value === "cones"
+      ? "Cones: every cell is one decoded gate value from the sweep texture (nearest-neighbour, no smoothing), drawn on a mesh placed with the engine's 4/3-Earth beam geometry. Cell extent in azimuth is half the local radial spacing each side (a display extent, not the antenna beamwidth). Straight triangles between mesh knots stay within about 1 m of the beam curve. Gates are not interpolated between tilts. Tap-to-inspect works in Points mode only. "
+      : $<HTMLSelectElement>("render").value === "volume"
       ? "Volume render: gates are binned into 1.5 km × 0.75 km voxels, each drawn as one soft translucent sprite coloured by the MAXIMUM measured value of its gates (beam-centre heights, 4/3 Earth model). Voxel size is a display choice, not the radar's resolution; nothing is averaged or interpolated, and the soft look is only a rendering effect. "
       : "Measured gates only (selected product), drawn as points at beam-centre height (4/3 Earth model); sample volumes are not drawn (beam width not decoded). Not interpolated. ") +
     " Gates below the threshold, range-folded gates and unscanned regions are not drawn; their absence is not evidence of no echo. Not an operational or safety product.";
@@ -166,9 +173,43 @@ function drawVolume() {
   $("xsinfo").textContent = `${used.toLocaleString()} gates → ${best.size.toLocaleString()} voxels (${VOX_H_M} m × ${VOX_V_M} m, max value per voxel)`;
 }
 
+async function drawCones() {
+  const token = ++coneToken, key = `${volDir}|${product}`;
+  try {
+    let list = sweepCache.get(key);
+    if (!list) {
+      const idx = await loadSweepIndex(volDir, product);
+      list = await Promise.all(idx.cuts.map((c) => loadSweep(volDir, c.path)));
+      sweepCache.clear(); sweepCache.set(key, list);
+      const sk = idx.skipped.length ? ` Skipped cuts: ${idx.skipped.map((x) => `${x.elevation_number} (${x.reason})`).join("; ")}.` : "";
+      $("xsinfo").textContent = `${list.length} sweeps, textures ${list[0]?.hashStatus ?? "n/a"}.${sk}`;
+    }
+    if (token !== coneToken) return;
+    const t = Number(thr()), rule = RULE[product] ?? "ge", k = vex(), al = alpha(), sw = sweepSel();
+    const keep = (v: number) => (rule === "absge" ? Math.abs(v) >= t : rule === "le" ? v <= t : v >= t);
+    for (const p of coneLayers) viewer.scene.primitives.remove(p);
+    coneLayers = [];
+    for (const s of list) {
+      if (sw !== "" && s.meta.elevation_number !== Number(sw)) continue;
+      const lut = buildLut(s, (v) => (keep(v) ? binHex(v) : null));
+      const layer = buildCone(s, k, lut, al);
+      viewer.scene.primitives.add(layer.primitive);
+      coneLayers.push(layer.primitive);
+    }
+  } catch (e) {
+    $("err").textContent = `Cones unavailable: ${(e as Error).message}`; // never substitute other data
+  }
+}
+
 function draw() {
   if (!art) return;
+  for (const p of coneLayers) viewer.scene.primitives.remove(p);
+  coneLayers = []; coneToken++;
   if (cloud) { viewer.scene.primitives.remove(cloud); cloud = null; }
+  if ($<HTMLSelectElement>("render").value === "cones") {
+    if (points) { viewer.scene.primitives.remove(points); points = null; }
+    void drawCones(); banner(); drawCoverage(); return;
+  }
   if ($<HTMLSelectElement>("render").value === "volume") {
     if (points) { viewer.scene.primitives.remove(points); points = null; }
     drawVolume(); banner(); drawCoverage(); return;

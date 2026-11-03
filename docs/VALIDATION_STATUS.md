@@ -27,7 +27,7 @@ Cases: KTLX20130520_195111_V06 (sha256 d41dcfa4...), KDIX20140430_120023_V06 (sh
 | Inspection mode (Phase 6) | minimal click panel (class, dBZ, raw N, position, heights, source indices) | none; no link back to the original source bytes yet | NOT validated |
 | External product comparison (WCT, MRMS, GridRad) | no | - | Phase 7, INCOMPLETE |
 | Volume render v1 (`drawVolume`, viewer-side voxel max-binning) | yes, first version | desktop browser look on the KDIX 2014 fixture only; no check of voxel values against gates | NOT validated; to be replaced by engine R5 (L30) |
-| Filled sweeps / cones (PLAN_V2 R1, R12) | no | - | PLANNED |
+| Filled sweeps / cones (PLAN_V2 R1, R12): `engine/sweeps.py`, viewer `cones.ts` | yes for REF, VEL, SW, ZDR, RHO (one-byte textures); PHI skipped (10-bit raw, up to 1022) and listed in the sweep index | `tests/test_sweeps.py` (16 tests): every texture byte equals the independent spec reader on both volumes (REF 9.5M and 6.1M gates, 0 mismatches), mesh cell centres lie within 4 m of the gate-table positions (bound 25 m; deliberate row-shift and half-gate-shift faults are caught), value table equals the engine conversion. Viewer: looked at in a desktop browser on the El Reno case only; not on an Android device; no tap-to-inspect in Cones mode | NOT validated (mesh and gate table share the geometry function, so this proves alignment, not the beam model) |
 | Engine-built 3D grid and iso-surface (R5, R6) | no | - | PLANNED (L31) |
 | Storm library El Reno/Moore (R2) | no | - | PLANNED |
 | Level III products (R10) | no | bucket listing seen only | PLANNED (L32) |
