@@ -25,6 +25,22 @@ android {
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
+    signingConfigs {
+        // Release key: from env (CI) or ~/.android/radar-scout-keystore.properties (local). Never committed.
+        val props = Properties().apply {
+            val f = File(System.getProperty("user.home"), ".android/radar-scout-keystore.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }
+        val storePath = System.getenv("RADAR_KEYSTORE") ?: props.getProperty("storeFile")
+        if (storePath != null) {
+            create("release") {
+                storeFile = file(storePath)
+                storePassword = System.getenv("RADAR_KEYSTORE_PASSWORD") ?: props.getProperty("storePassword")
+                keyAlias = System.getenv("RADAR_KEY_ALIAS") ?: props.getProperty("keyAlias")
+                keyPassword = System.getenv("RADAR_KEY_PASSWORD") ?: props.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".debug"
@@ -40,6 +56,7 @@ android {
             }
         }
         getByName("release") {
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             optimization {
                enable = true
             }

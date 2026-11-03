@@ -59,8 +59,12 @@ export async function loadArtifact(dirUrl: string): Promise<Artifact> {
   if (h !== null && h !== g.sha256) throw new Error("gates.bin SHA-256 does not match viewer.json");
   const hashStatus = h === null ? "NOT verified (insecure context: SHA-256 unavailable)" : "gates.bin SHA-256 verified";
   let off = 0;
-  const take = <T>(Ctor: new (b: ArrayBuffer, o: number, l: number) => T, size: number): T => {
-    const a = new Ctor(buf, off, n); off += size * n; return a;
+  // Columns are packed back to back, so with an odd row count a column can start at an offset that is not a
+  // multiple of its element size (typed arrays then throw). Such a column is copied byte for byte to an aligned buffer.
+  const take = <T>(Ctor: (new (b: ArrayBuffer, o: number, l: number) => T) & { BYTES_PER_ELEMENT: number }, size: number): T => {
+    const start = off; off += size * n;
+    if (start % Ctor.BYTES_PER_ELEMENT === 0) return new Ctor(buf, start, n);
+    return new Ctor(buf.slice(start, off), 0, n);
   };
   // Little-endian typed arrays assume a little-endian host (true for x86-64 and arm64 Android/Windows).
   return {
