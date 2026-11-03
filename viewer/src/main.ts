@@ -33,11 +33,23 @@ const viewer = new Cesium.Viewer("cesium", {
   navigationHelpButton: false, animation: false, timeline: false, fullscreenButton: false, infoBox: false,
   selectionIndicator: false, requestRenderMode: false,
 });
+(window as unknown as { __viewer: Cesium.Viewer }).__viewer = viewer; // debugging handle
 viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#1b2a38");
 // Offline basemap shipped with Cesium (Natural Earth II, coarse). No tile server or token is contacted.
 Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"))
-  .then((p) => { const l = viewer.imageryLayers.addImageryProvider(p); l.brightness = 0.45; l.saturation = 0.6; })
+  .then((p) => { const l = viewer.imageryLayers.addImageryProvider(p, 0); l.brightness = 0.45; l.saturation = 0.6; })
   .catch(() => { /* basemap is cosmetic */ });
+// Zoom-dependent basemap (Esri World Dark Gray base + reference labels) drawn over the coarse one when online.
+// Cosmetic only: tiles are never used for any value; if they fail to load the offline layer stays visible.
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+const ESRI_CREDIT = "Esri, HERE, Garmin, © OpenStreetMap contributors";
+viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+  url: ESRI + "Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", maximumLevel: 16, credit: ESRI_CREDIT,
+}));
+viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+  url: ESRI + "Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", maximumLevel: 16, credit: ESRI_CREDIT,
+}));
+
 
 let points: Cesium.PointPrimitiveCollection | null = null;
 let covLines: Cesium.PolylineCollection | null = null;
@@ -114,7 +126,7 @@ function describe(a: Artifact) {
 
 function draw() {
   if (!art) return;
-  const a = art, k = vex(), al = alpha(), sw = sweepSel();
+  const a = art, k = vex(), al = alpha(), sw = sweepSel(), ps = Number($<HTMLSelectElement>("psize").value);
   if (points) viewer.scene.primitives.remove(points);
   points = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
   let shown = 0;
@@ -123,7 +135,8 @@ function draw() {
     if (sw !== "" && a.elevNo[i] !== Number(sw)) continue;
     points!.add({
       position: Cesium.Cartesian3.fromDegrees(a.lon[i], a.lat[i], a.hEll[i] * k),
-      color: Cesium.Color.fromCssColorString(binHex(a.value[i])).withAlpha(al), pixelSize: 3, id: i,
+      color: Cesium.Color.fromCssColorString(binHex(a.value[i])).withAlpha(al), pixelSize: ps, id: i,
+      scaleByDistance: new Cesium.NearFarScalar(20000, 2.5, 600000, 0.8),
     });
     shown++;
   }
@@ -190,14 +203,19 @@ async function loadVolume(dir: string) {
   }
 }
 
+let sideOn = false;
 function home() {
   if (!art) return;
   const rd = art.meta.radar;
   if (viewer.scene.mode === Cesium.SceneMode.SCENE2D) {
     viewer.camera.setView({ destination: Cesium.Rectangle.fromDegrees(rd.lon - 4, rd.lat - 3, rd.lon + 4, rd.lat + 3) });
+  } else if (sideOn) {
+    // Low oblique view from the south: vertical structure is visible, especially with exaggeration above 1x.
+    viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(rd.lon, rd.lat - 1.6, 60000), orientation: { pitch: Cesium.Math.toRadians(-12) } });
   } else {
     viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(rd.lon, rd.lat - 2.5, 450000), orientation: { pitch: Cesium.Math.toRadians(-50) } });
   }
+  sideOn = !sideOn;
 }
 
 async function loadLatest() {
@@ -339,6 +357,7 @@ $("product").addEventListener("change", () => {
 });
 $("alpha").addEventListener("input", draw);
 $("vex").addEventListener("change", draw);
+$("psize").addEventListener("change", draw);
 $("sweep").addEventListener("change", draw);
 $("cov").addEventListener("change", drawCoverage);
 $("xgo").addEventListener("click", applySection);
