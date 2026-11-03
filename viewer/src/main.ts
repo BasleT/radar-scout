@@ -33,25 +33,38 @@ function safeSet(k: string, v: string) { try { localStorage.setItem(k, v); } cat
 const viewer = new Cesium.Viewer("cesium", {
   baseLayer: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false,
   navigationHelpButton: false, animation: false, timeline: false, fullscreenButton: false, infoBox: false,
-  selectionIndicator: false, requestRenderMode: false,
+  selectionIndicator: false,
+  // Render at the phone's real pixel density (Cesium's default draws at CSS pixels and upscales: blurry), but only
+  // when something changes, and without MSAA, which is what keeps a high-density screen smooth.
+  useBrowserRecommendedResolution: false, requestRenderMode: true, maximumRenderTimeChange: Infinity, msaaSamples: 1,
 });
+// With useBrowserRecommendedResolution off, Cesium already renders at devicePixelRatio; cap the effective density at 2x.
+const fitResolution = () => { viewer.resolutionScale = Math.min(1, 2 / (window.devicePixelRatio || 1)); viewer.scene.requestRender(); };
+fitResolution();
+window.addEventListener("resize", fitResolution);
+viewer.scene.globe.maximumScreenSpaceError = 1.25; // finer map tiles (sharper labels)
+viewer.scene.postProcessStages.fxaa.enabled = false;
 (window as unknown as { __viewer: Cesium.Viewer }).__viewer = viewer; // debugging handle
 viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#1b2a38");
-// Offline basemap shipped with Cesium (Natural Earth II, coarse). No tile server or token is contacted.
-Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"))
-  .then((p) => { const l = viewer.imageryLayers.addImageryProvider(p, 0); l.brightness = 0.45; l.saturation = 0.6; })
-  .catch(() => { /* basemap is cosmetic */ });
-// Zoom-dependent basemap (Esri World Dark Gray base + reference labels) drawn over the coarse one when online.
-// Cosmetic only: tiles are never used for any value; if they fail to load the offline layer stays visible.
+// Basemap: Esri World Dark Gray (base + reference labels), zoom-dependent. Cosmetic only: tiles are never used for any
+// value. The coarse Natural Earth II image that ships with Cesium is added underneath only if the online tiles fail, so
+// the normal case pays for two imagery layers, not three.
 const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
 const ESRI_CREDIT = "Esri, HERE, Garmin, © OpenStreetMap contributors";
-viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+const esriBase = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
   url: ESRI + "Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", maximumLevel: 16, credit: ESRI_CREDIT,
 }));
 viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
   url: ESRI + "Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", maximumLevel: 16, credit: ESRI_CREDIT,
 }));
-
+let offlineBase = false;
+esriBase.imageryProvider.errorEvent.addEventListener(() => {
+  if (offlineBase) return;
+  offlineBase = true;
+  Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"))
+    .then((p) => { const l = viewer.imageryLayers.addImageryProvider(p, 0); l.brightness = 0.45; l.saturation = 0.6; viewer.scene.requestRender(); })
+    .catch(() => { /* basemap is cosmetic */ });
+});
 
 let cloud: Cesium.Primitive | null = null; // point or volume buffer
 let gateEcef: Float64Array | null = null; // ECEF of every loaded gate at the current exaggeration (display + tap-to-inspect)
@@ -226,6 +239,7 @@ async function drawCones() {
       viewer.scene.primitives.add(layer.primitive);
       coneLayers.push(layer.primitive);
     }
+    viewer.scene.requestRender();
   } catch (e) {
     $("err").textContent = `Cones unavailable: ${(e as Error).message}`; // never substitute other data
   }
@@ -242,6 +256,7 @@ function draw() {
   else drawPoints();
   banner();
   drawCoverage();
+  viewer.scene.requestRender();
 }
 
 function drawCoverage() {
@@ -305,6 +320,7 @@ async function loadVolume(dir: string) {
 let sideOn = false;
 function home() {
   if (!art) return;
+  viewer.scene.requestRender();
   const rd = art.meta.radar;
   if (viewer.scene.mode === Cesium.SceneMode.SCENE2D) {
     viewer.camera.setView({ destination: Cesium.Rectangle.fromDegrees(rd.lon - 4, rd.lat - 3, rd.lon + 4, rd.lat + 3) });
@@ -475,6 +491,7 @@ function setView(two: boolean) {
   $("v2d").classList.toggle("pri", two);
   $("v3d").classList.toggle("pri", !two);
   if (two) viewer.scene.morphTo2D(0); else viewer.scene.morphTo3D(0);
+  viewer.scene.requestRender();
   viewer.scene.morphComplete.addEventListener(function once() { viewer.scene.morphComplete.removeEventListener(once); home(); });
 }
 $("v3d").addEventListener("click", () => setView(false));
