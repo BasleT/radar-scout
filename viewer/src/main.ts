@@ -265,6 +265,23 @@ function home() {
   sideOn = !sideOn;
 }
 
+// Storm cases: the server lists archive cases it has published in <root>/cases.json (cases live at <root>/cases/<id>).
+type CaseEntry = { id: string; title: string; station: string; date: string; base: string; n_volumes: number; note: string };
+let caseList: CaseEntry[] = [];
+const serverRoot = () => base().replace(/\/cases\/[^/]+$/, "");
+async function loadCases() {
+  const sel = $<HTMLSelectElement>("cases");
+  try {
+    const r = await fetch(`${serverRoot()}/cases.json`, { cache: "no-store" });
+    caseList = r.ok ? ((await r.json()).cases as CaseEntry[]) : [];
+  } catch { caseList = []; }
+  const cur = base().slice(serverRoot().length + 1);
+  sel.innerHTML = `<option value="">Live (latest)</option>` + caseList.map((c) => `<option value="${c.base}">${c.title}</option>`).join("");
+  sel.value = caseList.some((c) => c.base === cur) ? cur : "";
+  const c = caseList.find((x) => x.base === sel.value);
+  $("caseinfo").textContent = c ? `${c.station} ${c.date}, ${c.n_volumes} volumes. ${c.note}` : "";
+}
+
 async function loadLatest() {
   safeSet(KEY, base());
   index = await loadIndex(base()).catch(() => null);
@@ -282,6 +299,7 @@ async function loadLatest() {
     ok = await loadVolume(`${base()}/latest`);
   }
   if (ok) home();
+  void loadCases();
 }
 
 function tlabel() {
@@ -393,7 +411,13 @@ $("v2d").addEventListener("click", () => setView(true));
 $("home").addEventListener("click", home);
 
 $<HTMLInputElement>("server").value = safeGet(KEY) ?? (import.meta.env.VITE_DEFAULT_SERVER as string | undefined) ?? "/data";
+void loadCases();
 $("load").addEventListener("click", () => { setPlaying(false); void loadLatest(); });
+$("cases").addEventListener("change", () => {
+  const root = serverRoot(), v = $<HTMLSelectElement>("cases").value;
+  $<HTMLInputElement>("server").value = v ? `${root}/${v}` : root;
+  setPlaying(false); void loadLatest();
+});
 $("thr").addEventListener("change", () => { if (volDir) void loadVolume(volDir); });
 $("product").addEventListener("change", () => {
   product = $<HTMLSelectElement>("product").value;
